@@ -24,8 +24,8 @@ es, y ya está en el armario.
 ## Supuestos por comprobar
 
 - [x] **El cuerpo 3D conserva sus controles de forma al llevarlo a la web.** Comprobado el 14 de
-  octubre de 2026: el cuerpo de MakeHuman se exporta con seis formas (2,5 MB) y los tres controles
-  lo deforman en el navegador. Ver `modelos/cuerpo.py` y la pantalla `#cuerpo`.
+  octubre de 2026: los cuerpos de MakeHuman se exportan con sus formas (unos 2,4 MB cada uno) y los
+  controles los deforman en el navegador, pelo incluido. Ver `modelos/cuerpo.py` y la pantalla `#cuerpo`.
 - [ ] **Va fluido en un móvil normal.** Se prueba en un teléfono con el cuerpo y dos prendas.
 - [ ] **Una foto plana da una textura creíble.** Se prueba con una prenda lisa, una de tejido
   marcado y una con estampado grande.
@@ -38,7 +38,8 @@ la foto recortada colocada delante del cuerpo, que es lo que ya hace la prueba a
 
 Dentro:
 
-- Cuerpo con tres controles: altura, complexión y proporción hombros-cadera.
+- Dos cuerpos base, mujer y hombre, cada uno con pelo y dos controles: altura y complexión.
+  (Cambiado el 14 de octubre de 2026: antes era un solo cuerpo con un control de hombros y cadera.)
 - Dos prendas de catálogo: una camiseta y un pantalón.
 - La captura que ya funciona (foto y recorte), más elegir el tipo de prenda y extraer su color.
 - Armario guardado en el dispositivo, y vestir el maniquí eligiendo de él.
@@ -54,13 +55,15 @@ Dentro:
 - **Sugerencias automáticas de conjuntos.** Buena idea, pero no prueba nada del reto 3D.
 - **Compartir con amigos y votar.** Para después.
 - **Calzado, accesorios y abrigos.** Amplían el catálogo, que es lo más caro de producir.
-- **Caras, pelo y tono de piel.** El maniquí es un cuerpo neutro.
+- **Caras y tono de piel, y elegir peinado.** Cada cuerpo lleva un peinado fijo; el resto es neutro.
 
 ## Preguntas abiertas
 
 - ¿Cuántas formas de prenda hacen falta? **Quince**, como objetivo; el alcance mínimo sigue siendo dos.
 - ¿De dónde salen las prendas 3D? **Del catálogo libre de MakeHuman siempre que se pueda.** Falta
-  comprobar qué prendas hay, con qué licencia cada una y si siguen al cuerpo al cambiar sus formas.
+  comprobar si siguen al cuerpo al cambiar sus formas. El paquete oficial libre (CC0) trae sobre
+  todo conjuntos enteros (traje informal, deportivo, elegante) y zapatos, no prendas sueltas: habrá
+  que separarlos o buscar prendas sueltas en el catálogo de la comunidad, mirando la licencia de cada una.
 - ¿Foto por lotes? **No por ahora.** De una en una: cada foto es una prenda y una forma, y separar
   varias prendas de una foto no aporta nada al 3D.
 

@@ -18,14 +18,25 @@
     accent-color: var(--acento);
 }
 
+.opciones {
+    display: flex;
+    gap: 0.5rem;
+}
+
 .cuerpo button {
-    padding: 0.7rem 1rem;
+    padding: 0.6rem 1.25rem;
     border: 0;
     border-radius: 0.75rem;
     background: var(--silueta);
     color: var(--texto);
     font: inherit;
     cursor: pointer;
+}
+
+.cuerpo button[aria-pressed='true'] {
+    background: var(--acento);
+    color: #fff;
+    font-weight: 600;
 }
 
 .cuerpo a {

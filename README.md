@@ -7,8 +7,8 @@ sin tener que probártela.
 
 - **Fotos**: eliges o haces una foto de una prenda (parte de arriba o parte de abajo), le quita el
   fondo y la coloca sobre una silueta. No guarda las prendas: se pierden al cerrar la página.
-- **Maniquí 3D** (`#cuerpo`): un cuerpo que se ajusta en altura, complexión y proporción de hombros
-  y cadera, y que se gira arrastrando.
+- **Maniquí 3D** (`#cuerpo`): eliges cuerpo de mujer o de hombre, cada uno con pelo, lo ajustas en
+  altura y complexión, y lo giras arrastrando.
 
 Demo: <https://pedromiras.github.io/armario/>
 
@@ -24,15 +24,19 @@ El código de esos pasos está en [src/recorte.js](src/recorte.js); la pantalla,
 
 ## El cuerpo 3D
 
-El cuerpo es el modelo base de [MakeHuman](http://www.makehumancommunity.org/), de licencia CC0.
-Está en `public/modelos/cuerpo.glb` y lo genera [modelos/cuerpo.py](modelos/cuerpo.py), que crea el
-cuerpo medio y guarda como formas sus seis extremos (delgado, corpulento, bajo, alto, y las dos
-proporciones de hombros y cadera). La app mezcla esas formas según los controles.
+Los cuerpos y el pelo son de [MakeHuman](http://www.makehumancommunity.org/), de licencia CC0.
+Están en `public/modelos/mujer.glb` y `hombre.glb`, y los genera
+[modelos/cuerpo.py](modelos/cuerpo.py): crea cada cuerpo base con su peinado y guarda como formas
+sus cuatro extremos (delgado, corpulento, bajo y alto). La app mezcla esas formas según los
+controles, y el pelo lleva las mismas para seguir al cuerpo.
 
-Para regenerarlo hace falta [Blender](https://www.blender.org/) 5 con la extensión MPFB:
+Para regenerarlos hace falta [Blender](https://www.blender.org/) 5 con la extensión MPFB y el
+paquete de recursos libres de MakeHuman
+([makehuman_system_assets_cc0.zip](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip),
+280 MB) descomprimido:
 
 ```bash
-blender -b --python modelos/cuerpo.py
+MAKEHUMAN_ASSETS=/ruta/al/paquete blender -b --python modelos/cuerpo.py
 ```
 
 La pantalla está en [src/Cuerpo.jsx](src/Cuerpo.jsx).

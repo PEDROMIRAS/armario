@@ -4,35 +4,42 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import './Cuerpo.css';
 
-// Cada control mezcla una de dos formas del modelo (ver modelos/cuerpo.py): por debajo de `medio`
-// la forma `menos`, por encima la forma `mas`. `tramo` es cuánto hay que alejarse del medio para
-// aplicar la forma entera.
-const CONTROLES = [
-    // El cuerpo medio mide 166 cm; sus formas extremas, 130 y 237. Se limita a alturas de persona.
-    { id: 'altura', nombre: 'Altura', unidad: ' cm', min: 145, max: 205, paso: 1, medio: 166, menos: 'bajo', tramoMenos: 36, mas: 'alto', tramoMas: 71 },
-    { id: 'complexion', nombre: 'Complexión', min: -1, max: 1, paso: 0.01, medio: 0, menos: 'delgado', tramoMenos: 1, mas: 'corpulento', tramoMas: 1 },
-    { id: 'proporcion', nombre: 'Hombros y cadera', min: -1, max: 1, paso: 0.01, medio: 0, menos: 'femenino', tramoMenos: 1, mas: 'masculino', tramoMas: 1 },
+// Un archivo por cuerpo base; cada uno trae las formas bajo, alto, delgado y corpulento (modelos/cuerpo.py)
+const CUERPOS = [
+    { id: 'mujer', nombre: 'Mujer' },
+    { id: 'hombre', nombre: 'Hombre' },
 ];
-const MEDIO = Object.fromEntries(CONTROLES.map((c) => [c.id, c.medio]));
+const ALTURA = { min: 145, max: 205 }; // cm: las formas extremas del modelo van mucho más allá de una persona
+
+/** Mayor valor (o menor, con signo -1) de la coordenada Y en una lista de posiciones x, y, z. */
+const extremoY = (posiciones, signo = 1) => {
+    let extremo = -Infinity;
+    for (let i = 1; i < posiciones.count * 3; i += 3) extremo = Math.max(extremo, signo * posiciones.array[i]);
+    return signo * extremo;
+};
 
 export default function Cuerpo() {
     const lienzo = useRef(null);
-    const malla = useRef(null);
+    const escena = useRef(null);
     const pintar = useRef(() => {});
-    const [medidas, setMedidas] = useState(MEDIO);
-    const [estado, setEstado] = useState('Cargando el cuerpo…');
+    const [sexo, setSexo] = useState('mujer');
+    // Lo cargado: sus mallas y cuánto mide, en cm, el cuerpo base y cuánto le suman o restan las formas
+    const [modelo, setModelo] = useState(null);
+    const [altura, setAltura] = useState(null); // null = la del cuerpo base
+    const [complexion, setComplexion] = useState(0);
+    const [estado, setEstado] = useState('');
 
     useEffect(() => {
         const canvas = lienzo.current;
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        const escena = new THREE.Scene();
+        escena.current = new THREE.Scene();
         const camara = new THREE.PerspectiveCamera(30, 1, 0.1, 20);
         camara.position.set(0, 1.02, 4.5);
-        escena.add(new THREE.HemisphereLight(0xffffff, 0x8a8478, 2.2));
+        escena.current.add(new THREE.HemisphereLight(0xffffff, 0x8a8478, 2.2));
         const foco = new THREE.DirectionalLight(0xffffff, 1.6);
         foco.position.set(1.5, 3, 2.5);
-        escena.add(foco);
+        escena.current.add(foco);
 
         const controles = new OrbitControls(camara, canvas);
         controles.target.set(0, 1.02, 0);
@@ -43,76 +50,103 @@ export default function Cuerpo() {
         controles.update();
 
         // Se pinta solo cuando algo cambia, no en cada fotograma: ahorra batería en el móvil
-        pintar.current = () => renderer.render(escena, camara);
+        pintar.current = () => renderer.render(escena.current, camara);
         controles.addEventListener('change', pintar.current);
 
-        const ajustar = () => {
-            const { clientWidth: ancho, clientHeight: alto } = canvas;
-            renderer.setSize(ancho, alto, false);
-            camara.aspect = ancho / alto;
+        const observador = new ResizeObserver(() => {
+            renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+            camara.aspect = canvas.clientWidth / canvas.clientHeight;
             camara.updateProjectionMatrix();
             pintar.current();
-        };
-        const observador = new ResizeObserver(ajustar);
+        });
         observador.observe(canvas);
 
-        let cancelado = false;
-        new GLTFLoader().load(
-            `${import.meta.env.BASE_URL}modelos/cuerpo.glb`,
-            (gltf) => {
-                if (cancelado) return;
-                gltf.scene.traverse((objeto) => {
-                    if (!objeto.isMesh) return;
-                    objeto.material = new THREE.MeshStandardMaterial({ color: 0xc9c2b8, roughness: 0.85 });
-                    malla.current = objeto;
-                });
-                escena.add(gltf.scene);
-                setEstado('');
-                pintar.current();
-            },
-            undefined,
-            () => setEstado('No se ha podido cargar el cuerpo.')
-        );
-
         return () => {
-            cancelado = true;
             observador.disconnect();
             controles.dispose();
             renderer.dispose();
-            malla.current = null;
         };
     }, []);
 
     useEffect(() => {
-        const m = malla.current;
-        if (!m) return;
-        for (const c of CONTROLES) {
-            const desvio = medidas[c.id] - c.medio;
-            m.morphTargetInfluences[m.morphTargetDictionary[c.menos]] = Math.max(0, -desvio / c.tramoMenos);
-            m.morphTargetInfluences[m.morphTargetDictionary[c.mas]] = Math.max(0, desvio / c.tramoMas);
+        let cancelado = false;
+        setEstado('Cargando el cuerpo…');
+        new GLTFLoader().load(
+            `${import.meta.env.BASE_URL}modelos/${sexo}.glb`,
+            (gltf) => {
+                if (cancelado) return;
+                const mallas = [];
+                gltf.scene.traverse((objeto) => {
+                    if (!objeto.isMesh) return;
+                    mallas.push(objeto);
+                    if (objeto.name === 'cuerpo') {
+                        objeto.material = new THREE.MeshStandardMaterial({ color: 0xc9c2b8, roughness: 0.85 });
+                    } else {
+                        // El pelo son láminas con textura: se recorta por su transparencia y se ve por las dos caras
+                        objeto.material.alphaTest = 0.4;
+                        objeto.material.transparent = false;
+                        objeto.material.side = THREE.DoubleSide;
+                    }
+                });
+                const cuerpo = mallas.find((m) => m.name === 'cuerpo');
+                const forma = (nombre) => cuerpo.geometry.morphAttributes.position[cuerpo.morphTargetDictionary[nombre]];
+                escena.current.add(gltf.scene);
+                setModelo({
+                    grupo: gltf.scene,
+                    mallas,
+                    base: Math.round(extremoY(cuerpo.geometry.attributes.position) * 100),
+                    tramoMas: extremoY(forma('alto')) * 100,
+                    tramoMenos: -extremoY(forma('bajo'), -1) * 100,
+                });
+                setEstado('');
+            },
+            undefined,
+            () => setEstado('No se ha podido cargar el cuerpo.')
+        );
+        return () => { cancelado = true; };
+    }, [sexo]);
+
+    // Al cambiar de cuerpo, el anterior sale de la escena
+    useEffect(() => () => {
+        if (modelo) escena.current.remove(modelo.grupo);
+    }, [modelo]);
+
+    const alturaActual = altura ?? modelo?.base ?? 166;
+
+    useEffect(() => {
+        if (!modelo) return;
+        const desvio = alturaActual - modelo.base;
+        const influencias = {
+            bajo: Math.max(0, -desvio / modelo.tramoMenos),
+            alto: Math.max(0, desvio / modelo.tramoMas),
+            delgado: Math.max(0, -complexion),
+            corpulento: Math.max(0, complexion),
+        };
+        // El pelo lleva las mismas formas que el cuerpo, para seguirlo
+        for (const malla of modelo.mallas) {
+            for (const [nombre, valor] of Object.entries(influencias)) malla.morphTargetInfluences[malla.morphTargetDictionary[nombre]] = valor;
         }
         pintar.current();
-    }, [medidas, estado]);
+    }, [modelo, alturaActual, complexion]);
 
     return (
         <main className="cuerpo">
             <h1>Tu maniquí</h1>
+            <div className="opciones" role="group" aria-label="Cuerpo base">
+                {CUERPOS.map(({ id, nombre }) => (
+                    <button key={id} aria-pressed={sexo === id} onClick={() => { setSexo(id); setAltura(null); }}>{nombre}</button>
+                ))}
+            </div>
             <canvas ref={lienzo} aria-label="Maniquí en 3D. Arrastra para girarlo." role="img" />
             <p role="status" className="estado">{estado}</p>
-            {CONTROLES.map(({ id, nombre, unidad, min, max, paso }) => (
-                <label key={id}>
-                    {nombre}{unidad && `: ${medidas[id]}${unidad}`}
-                    <input
-                        type="range"
-                        min={min}
-                        max={max}
-                        step={paso}
-                        value={medidas[id]}
-                        onChange={(e) => setMedidas({ ...medidas, [id]: Number(e.target.value) })}
-                    />
-                </label>
-            ))}
-            <button onClick={() => setMedidas(MEDIO)}>Volver al cuerpo medio</button>
+            <label>
+                Altura: {alturaActual} cm
+                <input type="range" min={ALTURA.min} max={ALTURA.max} step="1" value={alturaActual} onChange={(e) => setAltura(Number(e.target.value))} />
+            </label>
+            <label>
+                Complexión
+                <input type="range" min="-1" max="1" step="0.01" value={complexion} onChange={(e) => setComplexion(Number(e.target.value))} />
+            </label>
             <a href="#">Volver a la prueba de fotos</a>
         </main>
     );

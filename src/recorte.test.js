@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { caja } from './recorte.js';
+import { caja, franja } from './recorte.js';
 
 // Imagen de 5x4 transparente con un bloque visible de 2x2 en (1,1)
 const imagen = (visibles) => {
@@ -19,4 +19,16 @@ test('una imagen vacía o casi transparente no tiene caja', () => {
     const tenue = imagen([]);
     tenue[3] = 10; // por debajo del umbral: restos del recorte, no prenda
     assert.equal(caja(tenue, 5, 4), null);
+});
+
+test('la franja mide el cuerpo de la prenda, no las mangas', () => {
+    // Una "camiseta" de 10x6: mangas de lado a lado arriba (2 filas) y cuerpo de 4 de ancho debajo, descentrado
+    const ancho = 10, alto = 6;
+    const pixeles = new Uint8ClampedArray(ancho * alto * 4);
+    const pintar = (x, y) => { pixeles[(y * ancho + x) * 4 + 3] = 255; };
+    for (let y = 0; y < 2; y++) for (let x = 0; x < 10; x++) pintar(x, y);
+    for (let y = 2; y < 6; y++) for (let x = 2; x < 6; x++) pintar(x, y);
+    const c = caja(pixeles, ancho, alto);
+    assert.deepEqual(franja(pixeles, ancho, c, 0.5, 1), { ancho: 0.4, centro: 0.4 });
+    assert.deepEqual(franja(pixeles, ancho, c, 0, 0.3), { ancho: 1, centro: 0.5 });
 });

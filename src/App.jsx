@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { quitarFondo } from './recorte.js';
 import './App.css';
 
+// Cada prenda se escala para que su cuerpo (medido en `referencia`, una franja de la foto) ocupe
+// `ancho` del maniquí, y se cuelga desde `alto`. Porcentajes sobre la silueta de 100 x 200.
 const HUECOS = [
-    { id: 'arriba', nombre: 'Parte de arriba' },
-    { id: 'abajo', nombre: 'Parte de abajo' },
+    { id: 'arriba', nombre: 'Parte de arriba', referencia: [0.75, 0.95], ancho: 40, alto: 14 }, // el bajo, desde los hombros
+    { id: 'abajo', nombre: 'Parte de abajo', referencia: [0.02, 0.12], ancho: 37, alto: 44 }, // la cintura
 ];
 
 export default function App() {
@@ -12,14 +14,14 @@ export default function App() {
     const [estado, setEstado] = useState('');
     const [ocupado, setOcupado] = useState(false);
 
-    const poner = async (hueco, foto) => {
+    const poner = async ({ id: hueco, referencia }, foto) => {
         if (!foto) return;
         setOcupado(true);
         try {
-            const url = await quitarFondo(foto, setEstado);
+            const prenda = await quitarFondo(foto, setEstado, referencia);
             setPrendas((antes) => {
-                if (antes[hueco]) URL.revokeObjectURL(antes[hueco]);
-                return { ...antes, [hueco]: url };
+                if (antes[hueco]) URL.revokeObjectURL(antes[hueco].url);
+                return { ...antes, [hueco]: prenda };
             });
             setEstado('');
         } catch (error) {
@@ -40,23 +42,35 @@ export default function App() {
                     <path d="M33 90h34l3 104H54l-4-78-4 78H30z" />
                 </svg>
                 {/* La de abajo va primero para que la de arriba quede por encima, como una camiseta por fuera */}
-                {[...HUECOS].reverse().map(({ id, nombre }) => prendas[id] && (
-                    <img key={id} src={prendas[id]} alt={nombre} className={`prenda ${id}`} />
-                ))}
+                {[...HUECOS].reverse().map(({ id, nombre, ancho, alto }) => {
+                    const prenda = prendas[id];
+                    if (!prenda) return null;
+                    const anchoImagen = ancho / prenda.ancho;
+                    return (
+                        <img
+                            key={id}
+                            src={prenda.url}
+                            alt={nombre}
+                            className="prenda"
+                            // El centro del cuerpo de la prenda, no el de la foto, va al centro del maniquí
+                            style={{ width: `${anchoImagen}%`, top: `${alto}%`, left: `${50 - prenda.centro * anchoImagen}%` }}
+                        />
+                    );
+                })}
             </div>
 
             <p role="status" className="estado">{estado}</p>
 
             <div className="botones">
-                {HUECOS.map(({ id, nombre }) => (
-                    <label key={id} className={ocupado ? 'boton inactivo' : 'boton'}>
-                        {nombre}
+                {HUECOS.map((hueco) => (
+                    <label key={hueco.id} className={ocupado ? 'boton inactivo' : 'boton'}>
+                        {hueco.nombre}
                         <input
                             type="file"
                             accept="image/*"
                             capture="environment"
                             disabled={ocupado}
-                            onChange={(e) => { poner(id, e.target.files[0]); e.target.value = ''; }}
+                            onChange={(e) => { poner(hueco, e.target.files[0]); e.target.value = ''; }}
                         />
                     </label>
                 ))}

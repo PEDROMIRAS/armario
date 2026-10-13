@@ -37,25 +37,10 @@ h1 {
     fill: var(--silueta);
 }
 
+/* Tamaño y posición los calcula App.jsx con las medidas de cada prenda */
 .prenda {
     position: absolute;
-    left: 50%;
-    translate: -50% 0;
-    object-fit: contain;
-}
-
-.prenda.arriba {
-    top: 13%;
-    width: 78%;
-    height: 38%;
-    object-position: top;
-}
-
-.prenda.abajo {
-    top: 43%;
-    width: 52%;
-    height: 55%;
-    object-position: top;
+    max-width: none;
 }
 
 .botones {

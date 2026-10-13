@@ -1,0 +1,26 @@
+:root {
+    --texto: #1c1b22;
+    --texto-suave: #5f5c6b;
+    --fondo: #f6f5f2;
+    --silueta: #dcd9d2;
+    --acento: #2f5d50;
+
+    font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
+    color: var(--texto);
+    background: var(--fondo);
+    color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --texto: #f1efe9;
+        --texto-suave: #a9a6b3;
+        --fondo: #17161b;
+        --silueta: #34323b;
+        --acento: #3f7d6b;
+    }
+}
+
+body {
+    margin: 0;
+}

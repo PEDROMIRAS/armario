@@ -1,0 +1,93 @@
+main {
+    max-width: 26rem;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    text-align: center;
+}
+
+h1 {
+    margin: 0;
+    font-size: 1.75rem;
+}
+
+.intro,
+.estado {
+    margin: 0;
+    color: var(--texto-suave);
+}
+
+.estado {
+    min-height: 1.5em;
+}
+
+/* Las prendas se colocan en porcentajes sobre la silueta, que mide 1:2 */
+.maniqui {
+    position: relative;
+    width: min(100%, 16rem);
+    aspect-ratio: 1 / 2;
+}
+
+.maniqui svg {
+    width: 100%;
+    height: 100%;
+    fill: var(--silueta);
+}
+
+.prenda {
+    position: absolute;
+    left: 50%;
+    translate: -50% 0;
+    object-fit: contain;
+}
+
+.prenda.arriba {
+    top: 13%;
+    width: 78%;
+    height: 38%;
+    object-position: top;
+}
+
+.prenda.abajo {
+    top: 43%;
+    width: 52%;
+    height: 55%;
+    object-position: top;
+}
+
+.botones {
+    display: flex;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+.boton {
+    flex: 1;
+    padding: 0.9rem 0.5rem;
+    border-radius: 0.75rem;
+    background: var(--acento);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.boton:focus-within {
+    outline: 3px solid var(--texto);
+    outline-offset: 2px;
+}
+
+.boton.inactivo {
+    opacity: 0.5;
+    cursor: wait;
+}
+
+/* Oculto a la vista pero no al teclado ni al lector de pantalla */
+.boton input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}

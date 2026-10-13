@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Grafo de conocimiento generado con graphify
+graphify-out/

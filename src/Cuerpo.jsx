@@ -92,7 +92,7 @@ export default function Cuerpo() {
                     const pieza = objeto.material.name;
                     const prenda = PRENDAS.find(({ id }) => id === objeto.name);
                     if (pieza === 'piel' || pieza.startsWith('bajo_')) {
-                        objeto.material = new THREE.MeshStandardMaterial({ color: 0xc9c2b8, roughness: 0.85 });
+                        objeto.material = new THREE.MeshStandardMaterial({ color: 0xd8a585, roughness: 0.75 });
                         objeto.userData.bajo = pieza.split('_').slice(1);
                         if (pieza === 'piel') cuerpo = objeto;
                     } else if (prenda) {

@@ -61,9 +61,24 @@ def crear(genero, peinado, conjunto, cambios):
     bpy.context.view_layer.update()
     for malla in mallas:
         lugar = malla.matrix_world.copy()
-        with bpy.context.temp_override(object=malla, active_object=malla):
-            for modificador in [m for m in malla.modifiers if m.type == "ARMATURE"]:
-                bpy.ops.object.modifier_apply(modifier=modificador.name)
+        # Al doblar el hombro la malla se arruga en la axila; el suavizado correctivo reparte ese pliegue.
+        # Solo corrige si se calcula junto con el esqueleto, así que no se aplican uno a uno: se copia el
+        # resultado de los dos, con los demás modificadores (las máscaras) apagados para no perder vértices.
+        suavizado = malla.modifiers.new("suavizado", "CORRECTIVE_SMOOTH")
+        suavizado.iterations = 10
+        postura = [m for m in malla.modifiers if m.type in ("ARMATURE", "CORRECTIVE_SMOOTH")]
+        resto = [(m, m.show_viewport) for m in malla.modifiers if m not in postura]
+        for modificador, _ in resto:
+            modificador.show_viewport = False
+        colocada = malla.evaluated_get(bpy.context.evaluated_depsgraph_get()).data
+        assert len(colocada.vertices) == len(malla.data.vertices), malla.name
+        posiciones = [v.co.copy() for v in colocada.vertices]
+        for modificador in postura:
+            malla.modifiers.remove(modificador)
+        for vertice, posicion in zip(malla.data.vertices, posiciones):
+            vertice.co = posicion
+        for modificador, visible in resto:
+            modificador.show_viewport = visible
         malla.parent = None
         malla.matrix_world = lugar
     bpy.data.objects.remove(esqueleto)

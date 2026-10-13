@@ -8,7 +8,8 @@ sin tener que probártela.
 - **Fotos**: eliges o haces una foto de una prenda (parte de arriba o parte de abajo), le quita el
   fondo y la coloca sobre una silueta. No guarda las prendas: se pierden al cerrar la página.
 - **Maniquí 3D** (`#cuerpo`): eliges cuerpo de mujer o de hombre, cada uno con pelo, lo ajustas en
-  altura y complexión, y lo giras arrastrando.
+  altura y complexión, y lo giras arrastrando. Lleva puesto un conjunto de prueba, de un solo color,
+  que cambia de forma con el cuerpo.
 
 Demo: <https://pedromiras.github.io/armario/>
 
@@ -24,11 +25,15 @@ El código de esos pasos está en [src/recorte.js](src/recorte.js); la pantalla,
 
 ## El cuerpo 3D
 
-Los cuerpos y el pelo son de [MakeHuman](http://www.makehumancommunity.org/), de licencia CC0.
-Están en `public/modelos/mujer.glb` y `hombre.glb`, y los genera
-[modelos/cuerpo.py](modelos/cuerpo.py): crea cada cuerpo base con su peinado y guarda como formas
-sus cuatro extremos (delgado, corpulento, bajo y alto). La app mezcla esas formas según los
-controles, y el pelo lleva las mismas para seguir al cuerpo.
+Los cuerpos, el pelo y la ropa son de [MakeHuman](http://www.makehumancommunity.org/), de licencia
+CC0. Están en `public/modelos/mujer.glb` (2,9 MB) y `hombre.glb` (3,6 MB), y los genera
+[modelos/cuerpo.py](modelos/cuerpo.py): crea cada cuerpo base con su peinado y su prenda, le baja
+los brazos (MakeHuman lo crea con ellos abiertos) y guarda como formas sus cuatro extremos (delgado,
+corpulento, bajo y alto). La app mezcla esas formas según
+los controles, y el pelo y la prenda llevan las mismas para seguir al cuerpo.
+
+La parte del cuerpo que la prenda tapa va en el archivo como pieza aparte y la app no la pinta: así
+el cuerpo no asoma por la tela ceñida.
 
 Para regenerarlos hace falta [Blender](https://www.blender.org/) 5 con la extensión MPFB y el
 paquete de recursos libres de MakeHuman

@@ -77,28 +77,38 @@ export default function Cuerpo() {
             (gltf) => {
                 if (cancelado) return;
                 const mallas = [];
+                let cuerpo;
                 gltf.scene.traverse((objeto) => {
                     if (!objeto.isMesh) return;
                     mallas.push(objeto);
-                    if (objeto.name === 'cuerpo') {
+                    // El cuerpo llega en dos piezas, que se distinguen por el nombre de su material
+                    const pieza = objeto.material.name;
+                    if (pieza === 'piel' || pieza === 'tapado') {
                         objeto.material = new THREE.MeshStandardMaterial({ color: 0xc9c2b8, roughness: 0.85 });
+                        // Lo que la prenda tapa no se pinta: si no, el cuerpo asoma por la tela ceñida
+                        if (pieza === 'tapado') objeto.visible = false;
+                        else cuerpo = objeto;
+                    } else if (objeto.name === 'prenda') {
+                        // La tela es una sola capa: por las mangas y el cuello se ve su cara interior
+                        objeto.material = new THREE.MeshStandardMaterial({ color: 0x3f5f8a, roughness: 0.9, side: THREE.DoubleSide });
                     } else {
                         // El pelo son láminas con textura: se recorta por su transparencia y se ve por las dos caras
                         objeto.material.alphaTest = 0.4;
                         objeto.material.transparent = false;
+                        // El cargador la desactiva en los materiales transparentes; sin ella, el cuerpo y la prenda se pintan encima
+                        objeto.material.depthWrite = true;
                         objeto.material.side = THREE.DoubleSide;
                     }
                 });
-                const cuerpo = mallas.find((m) => m.name === 'cuerpo');
                 const forma = (nombre) => cuerpo.geometry.morphAttributes.position[cuerpo.morphTargetDictionary[nombre]];
-                escena.current.add(gltf.scene);
-                setModelo({
-                    grupo: gltf.scene,
-                    mallas,
+                // Las medidas van antes de añadirlo: si el archivo no trae el cuerpo esperado, no llega a la escena
+                const medidas = {
                     base: Math.round(extremoY(cuerpo.geometry.attributes.position) * 100),
                     tramoMas: extremoY(forma('alto')) * 100,
                     tramoMenos: -extremoY(forma('bajo'), -1) * 100,
-                });
+                };
+                escena.current.add(gltf.scene);
+                setModelo({ grupo: gltf.scene, mallas, ...medidas });
                 setEstado('');
             },
             undefined,

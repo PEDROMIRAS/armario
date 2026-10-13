@@ -60,8 +60,11 @@ Dentro:
 ## Preguntas abiertas
 
 - ¿Cuántas formas de prenda hacen falta? **Quince**, como objetivo; el alcance mínimo sigue siendo dos.
-- ¿De dónde salen las prendas 3D? **Del catálogo libre de MakeHuman siempre que se pueda.** Falta
-  comprobar si siguen al cuerpo al cambiar sus formas. El paquete oficial libre (CC0) trae sobre
+- ¿De dónde salen las prendas 3D? **Del catálogo libre de MakeHuman siempre que se pueda.**
+  Comprobado el 14 de octubre de 2026 con un conjunto entero por cuerpo: siguen al cuerpo en los
+  extremos de altura y complexión, porque MakeHuman reajusta la prenda a cada forma igual que el
+  pelo. La tela ceñida deja asomar el cuerpo, y se resuelve como en MakeHuman: cada prenda dice qué
+  parte del cuerpo tapa, y esa parte no se pinta. El paquete oficial libre (CC0) trae sobre
   todo conjuntos enteros (traje informal, deportivo, elegante) y zapatos, no prendas sueltas: habrá
   que separarlos o buscar prendas sueltas en el catálogo de la comunidad, mirando la licencia de cada una.
 - ¿Foto por lotes? **No por ahora.** De una en una: cada foto es una prenda y una forma, y separar

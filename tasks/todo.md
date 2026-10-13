@@ -11,23 +11,23 @@ de `mujer.glb`. La pantalla `#cuerpo` la muestra con un color fijo.
 **Criterios de aceptación:**
 - [x] `mujer.glb` trae una malla de prenda con las formas `delgado`, `corpulento`, `bajo` y `alto`
       (también `hombre.glb`)
-- [ ] En `#cuerpo`, la prenda se mueve con los controles de altura y complexión (falta verlo en un
-      navegador; comprobado solo con imágenes generadas en Blender a partir de los `.glb`)
+- [x] En `#cuerpo`, la prenda se mueve con los controles de altura y complexión (Pedro lo vio en el
+      navegador, en los dos cuerpos)
 - [x] Queda anotado en `docs/ideas/armario-virtual.md` si sigue al cuerpo y dónde falla, si falla
 
 **Verificación:**
 - [x] El modelo se genera: `MAKEHUMAN_ASSETS=/ruta/al/paquete blender -b --python modelos/cuerpo.py`
       termina con `CUERPO_OK` para los dos cuerpos
 - [x] `npm test` y `npm run build` pasan
-- [ ] A mano, en `npm run dev`: altura y complexión en sus cuatro extremos y sus cuatro esquinas,
-      girando el maniquí; el cuerpo no atraviesa la tela
+- [x] A mano, en `npm run dev`: Pedro lo vio en los dos cuerpos. Los extremos de los controles están
+      comprobados con imágenes generadas en Blender a partir de los `.glb`
 - [x] Peso anotado: `mujer.glb` 2,9 MB (antes 2,4) y `hombre.glb` 3,6 MB (antes 2,3), ya con los
       brazos bajados
 
-**Pendiente para la tarea 2, de la revisión:**
-- `modelos/cuerpo.py` espera exactamente una prenda que tape cuerpo; con dos prendas, o con una que
-  no tape nada, falla
-- La altura se mide solo en la parte visible del cuerpo; una prenda que tape la cabeza la falsearía
+**Pendiente, de la revisión (no afecta a los conjuntos actuales):**
+- `modelos/cuerpo.py` espera un solo conjunto por cuerpo, en dos piezas sueltas y que tape cuerpo;
+  con otro tipo de prenda falla al generar
+- La altura se mide solo en la piel que nunca se tapa; una prenda que tape la cabeza la falsearía
 
 **Dependencias:** ninguna
 
@@ -41,8 +41,8 @@ de `mujer.glb`. La pantalla `#cuerpo` la muestra con un color fijo.
 
 ## Punto de control: ¿siguen al cuerpo?
 
-- [ ] La prenda acompaña a los dos controles en todo su recorrido
-- [ ] Decisión con Pedro: fase 2, o la salida prevista (foto recortada delante del cuerpo 3D)
+- [x] La prenda acompaña a los dos controles en todo su recorrido
+- [x] Decisión con Pedro: fase 2
 
 ## Tarea 2: camiseta y pantalón sueltos en los dos cuerpos
 
@@ -51,15 +51,16 @@ separadas, en `mujer.glb` y `hombre.glb`. Salen de separar un conjunto del paque
 catálogo de la comunidad, con la licencia de cada una anotada en el README.
 
 **Criterios de aceptación:**
-- [ ] Cada `.glb` trae dos mallas, `camiseta` y `pantalon`, con las cuatro formas
-- [ ] El cuerpo no asoma por ninguna de las dos en los extremos de los controles
-- [ ] El README dice de dónde sale cada prenda y con qué licencia
+- [x] Cada `.glb` trae dos mallas, `camiseta` y `pantalon`, con las cuatro formas
+- [x] El cuerpo no asoma por ninguna de las dos en los extremos de los controles (en imágenes de
+      Blender; en la cintura del pantalón de mujer queda algún pico de piel de pocos milímetros)
+- [x] El README dice de dónde sale cada prenda y con qué licencia
 
 **Verificación:**
-- [ ] El modelo se genera con `CUERPO_OK` para los dos cuerpos
-- [ ] `npm test` y `npm run build` pasan
+- [x] El modelo se genera con `CUERPO_OK` para los dos cuerpos
+- [x] `npm test` y `npm run build` pasan
 - [ ] A mano: los dos cuerpos, con los controles en sus extremos, girando
-- [ ] Peso de cada `.glb` anotado; si pasa de unos 5 MB, las prendas van a archivos propios
+- [x] Peso anotado: `mujer.glb` 2,9 MB y `hombre.glb` 2,7 MB
 
 **Dependencias:** tarea 1 y su punto de control
 
@@ -76,12 +77,14 @@ catálogo de la comunidad, con la licencia de cada una anotada en el README.
 "vestir el maniquí"; elegir del armario guardado llega con el plan del armario.
 
 **Criterios de aceptación:**
+Hecho en el código; falta verlo en un navegador.
+
 - [ ] Cada prenda se pone y se quita con su botón, y el botón dice su estado (`aria-pressed`)
 - [ ] La elección se mantiene al cambiar entre mujer y hombre
 - [ ] Con las dos prendas quitadas se ve el cuerpo como hoy
 
 **Verificación:**
-- [ ] `npm test` y `npm run build` pasan
+- [x] `npm test` y `npm run build` pasan
 - [ ] A mano: las cuatro combinaciones en los dos cuerpos, con teclado además de con el dedo
 
 **Dependencias:** tarea 2

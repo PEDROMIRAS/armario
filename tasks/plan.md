@@ -35,13 +35,12 @@ Paquete de MakeHuman (qué prendas trae, con qué licencia)
 
 ### Fase 1: la prueba
 
-- [ ] Tarea 1: una prenda de MakeHuman sigue al cuerpo de mujer
+- [x] Tarea 1: una prenda de MakeHuman sigue al cuerpo de mujer
 
 ### Punto de control: ¿siguen al cuerpo?
 
-- [ ] La prenda acompaña a los dos controles en todo su recorrido, sin que el cuerpo la atraviese
-- [ ] Decisión con Pedro: seguir con la fase 2, o pasar a la salida prevista (foto recortada delante
-      del cuerpo 3D)
+- [x] La prenda acompaña a los dos controles en todo su recorrido, sin que el cuerpo la atraviese
+- [x] Decisión con Pedro: seguir con la fase 2
 
 ### Fase 2: el alcance mínimo de prendas
 

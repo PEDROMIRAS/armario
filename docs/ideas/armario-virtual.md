@@ -65,8 +65,10 @@ Dentro:
   extremos de altura y complexión, porque MakeHuman reajusta la prenda a cada forma igual que el
   pelo. La tela ceñida deja asomar el cuerpo, y se resuelve como en MakeHuman: cada prenda dice qué
   parte del cuerpo tapa, y esa parte no se pinta. El paquete oficial libre (CC0) trae sobre
-  todo conjuntos enteros (traje informal, deportivo, elegante) y zapatos, no prendas sueltas: habrá
-  que separarlos o buscar prendas sueltas en el catálogo de la comunidad, mirando la licencia de cada una.
+  todo conjuntos enteros (traje informal, deportivo, elegante) y zapatos, no prendas sueltas. Casi
+  todos vienen en dos piezas sin unir, la de arriba y el pantalón, y se separan solas al generar el
+  modelo: así salen la camiseta y el pantalón del alcance mínimo. El pantalón es el mismo en casi
+  todos; las partes de arriba son distintas y sirven para ampliar el catálogo sin salir del paquete.
 - ¿Foto por lotes? **No por ahora.** De una en una: cada foto es una prenda y una forma, y separar
   varias prendas de una foto no aporta nada al 3D.
 

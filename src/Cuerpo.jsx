@@ -10,6 +10,11 @@ const CUERPOS = [
     { id: 'mujer', nombre: 'Mujer' },
     { id: 'hombre', nombre: 'Hombre' },
 ];
+// Las prendas que trae cada archivo, como mallas con este nombre. El color es fijo hasta que salga de la foto.
+const PRENDAS = [
+    { id: 'camiseta', nombre: 'Camiseta', color: 0x3f5f8a },
+    { id: 'pantalon', nombre: 'Pantalón', color: 0x3a3f4a },
+];
 const ALTURA = { min: 145, max: 205 }; // cm: las formas extremas del modelo van mucho más allá de una persona
 
 /** Mayor valor (o menor, con signo -1) de la coordenada Y en una lista de posiciones x, y, z. */
@@ -28,6 +33,7 @@ export default function Cuerpo() {
     const [modelo, setModelo] = useState(null);
     const [altura, setAltura] = useState(null); // null = la del cuerpo base
     const [complexion, setComplexion] = useState(0);
+    const [puestas, setPuestas] = useState({ camiseta: true, pantalon: true });
     const [estado, setEstado] = useState('');
 
     useEffect(() => {
@@ -81,16 +87,18 @@ export default function Cuerpo() {
                 gltf.scene.traverse((objeto) => {
                     if (!objeto.isMesh) return;
                     mallas.push(objeto);
-                    // El cuerpo llega en dos piezas, que se distinguen por el nombre de su material
+                    // El cuerpo llega en varias piezas, que se distinguen por el nombre de su material: "piel" es
+                    // la que nunca se tapa, y "bajo_camiseta" o "bajo_camiseta_pantalon", la que queda bajo esas prendas
                     const pieza = objeto.material.name;
-                    if (pieza === 'piel' || pieza === 'tapado') {
+                    const prenda = PRENDAS.find(({ id }) => id === objeto.name);
+                    if (pieza === 'piel' || pieza.startsWith('bajo_')) {
                         objeto.material = new THREE.MeshStandardMaterial({ color: 0xc9c2b8, roughness: 0.85 });
-                        // Lo que la prenda tapa no se pinta: si no, el cuerpo asoma por la tela ceñida
-                        if (pieza === 'tapado') objeto.visible = false;
-                        else cuerpo = objeto;
-                    } else if (objeto.name === 'prenda') {
+                        objeto.userData.bajo = pieza.split('_').slice(1);
+                        if (pieza === 'piel') cuerpo = objeto;
+                    } else if (prenda) {
                         // La tela es una sola capa: por las mangas y el cuello se ve su cara interior
-                        objeto.material = new THREE.MeshStandardMaterial({ color: 0x3f5f8a, roughness: 0.9, side: THREE.DoubleSide });
+                        objeto.material = new THREE.MeshStandardMaterial({ color: prenda.color, roughness: 0.9, side: THREE.DoubleSide });
+                        objeto.userData.prenda = prenda.id;
                     } else {
                         // El pelo son láminas con textura: se recorta por su transparencia y se ve por las dos caras
                         objeto.material.alphaTest = 0.4;
@@ -140,6 +148,16 @@ export default function Cuerpo() {
         pintar.current();
     }, [modelo, alturaActual, complexion]);
 
+    useEffect(() => {
+        if (!modelo) return;
+        for (const malla of modelo.mallas) {
+            if (malla.userData.prenda) malla.visible = puestas[malla.userData.prenda];
+            // La piel que queda bajo una prenda puesta no se pinta: si no, asoma por la tela ceñida
+            if (malla.userData.bajo) malla.visible = !malla.userData.bajo.some((id) => puestas[id]);
+        }
+        pintar.current();
+    }, [modelo, puestas]);
+
     return (
         <main className="cuerpo">
             <h1>Tu maniquí</h1>
@@ -150,6 +168,11 @@ export default function Cuerpo() {
             </div>
             <canvas ref={lienzo} aria-label="Maniquí en 3D. Arrastra para girarlo." role="img" />
             <p role="status" className="estado">{estado}</p>
+            <div className="opciones" role="group" aria-label="Prendas puestas">
+                {PRENDAS.map(({ id, nombre }) => (
+                    <button key={id} aria-pressed={puestas[id]} onClick={() => setPuestas((antes) => ({ ...antes, [id]: !antes[id] }))}>{nombre}</button>
+                ))}
+            </div>
             <label>
                 Altura: {alturaActual} cm
                 <input type="range" min={ALTURA.min} max={ALTURA.max} step="1" value={alturaActual} onChange={(e) => setAltura(Number(e.target.value))} />

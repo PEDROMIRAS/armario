@@ -61,6 +61,8 @@ export async function quitarFondo(foto, alAvanzar, referencia) {
     const escala = Math.min(1, LADO_MAXIMO / Math.max(original.width, original.height));
     const reducida = lienzo(Math.round(original.width * escala), Math.round(original.height * escala));
     reducida.getContext('2d').drawImage(original, 0, 0, reducida.width, reducida.height);
+    // Una foto de móvil ocupa decenas de MB sin comprimir: se suelta ya, sin esperar a que el navegador decida
+    original.close();
 
     // Se carga aquí y no al abrir la app: pesa mucho y solo hace falta al añadir una prenda
     const { removeBackground } = await import('@imgly/background-removal');
@@ -74,11 +76,12 @@ export async function quitarFondo(foto, alAvanzar, referencia) {
     const completa = lienzo(imagen.width, imagen.height);
     const ctx = completa.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(imagen, 0, 0);
-    const pixeles = ctx.getImageData(0, 0, imagen.width, imagen.height).data;
-    const c = caja(pixeles, imagen.width, imagen.height);
-    if (!c) throw new Error('No se ha encontrado ninguna prenda en la foto.');
+    imagen.close();
+    const pixeles = ctx.getImageData(0, 0, completa.width, completa.height).data;
+    const c = caja(pixeles, completa.width, completa.height);
+    if (!c) throw new Error('foto sin prenda');
 
     const recortada = lienzo(c.ancho, c.alto);
     recortada.getContext('2d').drawImage(completa, c.x, c.y, c.ancho, c.alto, 0, 0, c.ancho, c.alto);
-    return { url: URL.createObjectURL(await aBlob(recortada, 'image/png')), ...franja(pixeles, imagen.width, c, ...referencia) };
+    return { url: URL.createObjectURL(await aBlob(recortada, 'image/png')), ...franja(pixeles, completa.width, c, ...referencia) };
 }

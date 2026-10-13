@@ -25,7 +25,9 @@ export default function App() {
             });
             setEstado('');
         } catch (error) {
-            setEstado(error.message || 'No se ha podido preparar la foto. Prueba con otra.');
+            // El error del navegador es técnico y en inglés: va a la consola, y en pantalla solo qué hacer
+            console.error(error);
+            setEstado('No se ha podido preparar la foto. Prueba con otra, con la prenda entera sobre un fondo liso.');
         }
         setOcupado(false);
     };

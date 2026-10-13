@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { formas } from './formas.js';
 import './Cuerpo.css';
 
 // Un archivo por cuerpo base; cada uno trae las formas bajo, alto, delgado y corpulento (modelos/cuerpo.py)
@@ -106,22 +107,22 @@ export default function Cuerpo() {
         return () => { cancelado = true; };
     }, [sexo]);
 
-    // Al cambiar de cuerpo, el anterior sale de la escena
+    // Al cambiar de cuerpo, el anterior sale de la escena y suelta su memoria gráfica
     useEffect(() => () => {
-        if (modelo) escena.current.remove(modelo.grupo);
+        if (!modelo) return;
+        escena.current.remove(modelo.grupo);
+        for (const malla of modelo.mallas) {
+            malla.geometry.dispose();
+            malla.material.map?.dispose();
+            malla.material.dispose();
+        }
     }, [modelo]);
 
     const alturaActual = altura ?? modelo?.base ?? 166;
 
     useEffect(() => {
         if (!modelo) return;
-        const desvio = alturaActual - modelo.base;
-        const influencias = {
-            bajo: Math.max(0, -desvio / modelo.tramoMenos),
-            alto: Math.max(0, desvio / modelo.tramoMas),
-            delgado: Math.max(0, -complexion),
-            corpulento: Math.max(0, complexion),
-        };
+        const influencias = formas(alturaActual, complexion, modelo);
         // El pelo lleva las mismas formas que el cuerpo, para seguirlo
         for (const malla of modelo.mallas) {
             for (const [nombre, valor] of Object.entries(influencias)) malla.morphTargetInfluences[malla.morphTargetDictionary[nombre]] = valor;

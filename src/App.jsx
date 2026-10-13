@@ -75,6 +75,7 @@ export default function App() {
                     </label>
                 ))}
             </div>
+            <a href="#cuerpo" className="enlace-cuerpo">Probar el maniquí en 3D</a>
         </main>
     );
 }

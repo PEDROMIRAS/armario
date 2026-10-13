@@ -76,3 +76,7 @@ h1 {
     height: 1px;
     opacity: 0;
 }
+
+.enlace-cuerpo {
+    color: var(--texto-suave);
+}

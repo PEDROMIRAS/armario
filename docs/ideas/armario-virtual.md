@@ -23,8 +23,9 @@ es, y ya está en el armario.
 
 ## Supuestos por comprobar
 
-- [ ] **El cuerpo 3D conserva sus controles de forma al llevarlo a la web.** Se prueba exportando el
-  modelo y moviendo tres controles en el navegador.
+- [x] **El cuerpo 3D conserva sus controles de forma al llevarlo a la web.** Comprobado el 14 de
+  octubre de 2026: el cuerpo de MakeHuman se exporta con seis formas (2,5 MB) y los tres controles
+  lo deforman en el navegador. Ver `modelos/cuerpo.py` y la pantalla `#cuerpo`.
 - [ ] **Va fluido en un móvil normal.** Se prueba en un teléfono con el cuerpo y dos prendas.
 - [ ] **Una foto plana da una textura creíble.** Se prueba con una prenda lisa, una de tejido
   marcado y una con estampado grande.
@@ -57,9 +58,11 @@ Dentro:
 
 ## Preguntas abiertas
 
-- ¿Cuántas formas de prenda hacen falta para cubrir un armario real: ocho, quince?
-- ¿Las prendas 3D se sacan del catálogo libre de MakeHuman o hay que modelarlas?
-- ¿La foto por lotes (varias prendas en una foto) hace falta ya, o basta de una en una?
+- ¿Cuántas formas de prenda hacen falta? **Quince**, como objetivo; el alcance mínimo sigue siendo dos.
+- ¿De dónde salen las prendas 3D? **Del catálogo libre de MakeHuman siempre que se pueda.** Falta
+  comprobar qué prendas hay, con qué licencia cada una y si siguen al cuerpo al cambiar sus formas.
+- ¿Foto por lotes? **No por ahora.** De una en una: cada foto es una prenda y una forma, y separar
+  varias prendas de una foto no aporta nada al 3D.
 
 ## Otras direcciones que se valoraron
 

@@ -48,7 +48,7 @@ export default function App() {
         } catch (error) {
             // El error del navegador es técnico y en inglés: va a la consola, y en pantalla solo qué hacer
             console.error(error);
-            setEstado('No se ha podido preparar la foto. Prueba con otra, con la prenda entera sobre un fondo liso.');
+            setEstado('No se ha podido preparar la foto. Prueba con otra en la que salga la prenda entera y sola, sin nadie puesto.');
         }
         setOcupado(false);
     };
@@ -71,7 +71,10 @@ export default function App() {
     return (
         <main>
             <h1>Armario</h1>
-            <p className="intro">Haz una foto a una prenda sobre un fondo liso y pruébala en el maniquí.</p>
+            <p className="intro">
+                Haz una foto a una prenda extendida sobre un fondo liso, o usa la foto de la tienda en la que
+                sale la prenda sola, sin modelo (en Zara suele ser la última).
+            </p>
 
             <div className="maniqui">
                 <svg viewBox="0 0 100 200" aria-hidden="true">

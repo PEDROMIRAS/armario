@@ -1,24 +1,49 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { quitarFondo } from './recorte.js';
 import { HUECOS, vestir } from './huecos.js';
+import { todas, guardar, borrar } from './almacen.js';
 import './App.css';
 
+// Lo que llevas puesto (hueco -> id de la prenda) se recuerda entre visitas
+const leerPuestas = () => {
+    try { return JSON.parse(localStorage.getItem('puestas')) ?? {}; } catch { return {}; }
+};
+const conUrl = (prenda) => ({ ...prenda, url: URL.createObjectURL(prenda.imagen) });
+
 export default function App() {
-    const [prendas, setPrendas] = useState({});
+    const [armario, setArmario] = useState([]);
+    const [puestas, setPuestas] = useState(leerPuestas);
     const [estado, setEstado] = useState('');
     const [ocupado, setOcupado] = useState(false);
+
+    useEffect(() => {
+        let cancelado = false;
+        todas().then(
+            (guardadas) => { if (!cancelado) setArmario(guardadas.map(conUrl)); },
+            (error) => { console.error(error); setEstado('No se ha podido abrir tu armario guardado.'); }
+        );
+        return () => { cancelado = true; };
+    }, []);
+
+    useEffect(() => {
+        try { localStorage.setItem('puestas', JSON.stringify(puestas)); } catch { /* sin almacenamiento: solo se olvida */ }
+    }, [puestas]);
 
     const poner = async (hueco, foto) => {
         if (!foto) return;
         setOcupado(true);
         try {
-            const prenda = await quitarFondo(foto, setEstado, hueco.referencia);
-            setPrendas((antes) => {
-                const nuevas = vestir(antes, hueco, prenda);
-                // Las que se quitan sueltan su imagen
-                for (const id in antes) if (nuevas[id] !== antes[id]) URL.revokeObjectURL(antes[id].url);
-                return nuevas;
-            });
+            const prenda = { hueco: hueco.id, ...(await quitarFondo(foto, setEstado, hueco.referencia)) };
+            let id;
+            try {
+                id = await guardar(prenda);
+            } catch (error) {
+                // Sin almacenamiento (p. ej. navegación privada) se puede probar igual, pero no se guarda
+                console.error(error);
+                id = crypto.randomUUID();
+            }
+            setArmario((antes) => [...antes, conUrl({ ...prenda, id })]);
+            setPuestas((antes) => vestir(antes, hueco, id));
             setEstado('');
         } catch (error) {
             // El error del navegador es técnico y en inglés: va a la consola, y en pantalla solo qué hacer
@@ -26,6 +51,21 @@ export default function App() {
             setEstado('No se ha podido preparar la foto. Prueba con otra, con la prenda entera sobre un fondo liso.');
         }
         setOcupado(false);
+    };
+
+    // Tocar una prenda guardada te la pone; si ya la llevas, te la quita
+    const alternar = (hueco, prenda) => setPuestas((antes) => {
+        if (antes[hueco.id] !== prenda.id) return vestir(antes, hueco, prenda.id);
+        const { [hueco.id]: _, ...resto } = antes;
+        return resto;
+    });
+
+    const tirar = (prenda) => {
+        if (!confirm('¿Borrar esta prenda de tu armario?')) return;
+        borrar(prenda.id).catch(console.error);
+        URL.revokeObjectURL(prenda.url);
+        setArmario((antes) => antes.filter((p) => p !== prenda));
+        setPuestas((antes) => Object.fromEntries(Object.entries(antes).filter(([, id]) => id !== prenda.id)));
     };
 
     return (
@@ -41,7 +81,7 @@ export default function App() {
                 </svg>
                 {/* La de abajo va primero para que la de arriba quede por encima, como una camiseta por fuera */}
                 {[...HUECOS].reverse().map(({ id, nombre, ancho, alto }) => {
-                    const prenda = prendas[id];
+                    const prenda = armario.find((p) => p.id === puestas[id]);
                     if (!prenda) return null;
                     const anchoImagen = ancho / prenda.ancho;
                     return (
@@ -73,6 +113,32 @@ export default function App() {
                     </label>
                 ))}
             </div>
+
+            {armario.length > 0 && (
+                <section className="armario" aria-label="Tu armario">
+                    <h2>Tu armario</h2>
+                    {HUECOS.map((hueco) => {
+                        const guardadas = armario.filter((p) => p.hueco === hueco.id);
+                        if (guardadas.length === 0) return null;
+                        return (
+                            <div key={hueco.id}>
+                                <h3>{hueco.nombre}</h3>
+                                <ul>
+                                    {guardadas.map((prenda) => (
+                                        <li key={prenda.id}>
+                                            <button className="miniatura" aria-pressed={puestas[hueco.id] === prenda.id} onClick={() => alternar(hueco, prenda)}>
+                                                <img src={prenda.url} alt={hueco.nombre} />
+                                            </button>
+                                            <button className="tirar" aria-label="Borrar del armario" onClick={() => tirar(prenda)}>×</button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        );
+                    })}
+                </section>
+            )}
+
             <a href="#cuerpo" className="enlace-cuerpo">Probar el maniquí en 3D</a>
         </main>
     );

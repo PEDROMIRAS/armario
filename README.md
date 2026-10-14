@@ -6,7 +6,9 @@ sin tener que probártela.
 **Estado: pruebas iniciales.** Hay dos pantallas sueltas, todavía sin unir:
 
 - **Fotos**: eliges o haces una foto de una prenda (parte de arriba, parte de abajo o vestido), le quita el
-  fondo y la coloca sobre una silueta. No guarda las prendas: se pierden al cerrar la página.
+  fondo y la coloca sobre una silueta. Cada prenda queda guardada en el propio móvil, en «Tu
+  armario», para volver a ponértela o borrarla. Safari puede borrar lo guardado si pasas semanas sin
+  abrir la web, salvo que la añadas a la pantalla de inicio.
 - **Maniquí 3D** (`#cuerpo`): eliges cuerpo de mujer o de hombre, cada uno con pelo, lo ajustas en
   altura y complexión, y lo giras arrastrando.
 

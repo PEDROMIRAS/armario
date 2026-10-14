@@ -53,8 +53,8 @@ const aBlob = (canvas, tipo) => new Promise((listo) => canvas.toBlob(listo, tipo
  * @param {Blob} foto - Imagen elegida o hecha con la cámara.
  * @param {Function} alAvanzar - Recibe un texto con el paso en curso.
  * @param {number[]} referencia - Franja [desde, hasta] donde se mide el cuerpo de la prenda.
- * @returns {Promise<{url: string, ancho: number, centro: number}>} Dirección local (blob:) del PNG
- *   recortado, y el ancho y el centro del cuerpo de la prenda como fracciones del ancho de la imagen.
+ * @returns {Promise<{imagen: Blob, ancho: number, centro: number}>} El PNG recortado, y el ancho y
+ *   el centro del cuerpo de la prenda como fracciones del ancho de la imagen.
  */
 export async function quitarFondo(foto, alAvanzar, referencia) {
     const original = await createImageBitmap(foto);
@@ -83,5 +83,5 @@ export async function quitarFondo(foto, alAvanzar, referencia) {
 
     const recortada = lienzo(c.ancho, c.alto);
     recortada.getContext('2d').drawImage(completa, c.x, c.y, c.ancho, c.alto, 0, 0, c.ancho, c.alto);
-    return { url: URL.createObjectURL(await aBlob(recortada, 'image/png')), ...franja(pixeles, completa.width, c, ...referencia) };
+    return { imagen: await aBlob(recortada, 'image/png'), ...franja(pixeles, completa.width, c, ...referencia) };
 }

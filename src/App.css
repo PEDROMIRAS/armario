@@ -77,6 +77,73 @@ h1 {
     opacity: 0;
 }
 
+.armario {
+    width: 100%;
+    text-align: left;
+}
+
+.armario h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.armario h3 {
+    margin: 0.75rem 0 0.25rem;
+    font-size: 0.9rem;
+    color: var(--texto-suave);
+}
+
+/* Una fila por hueco que se desplaza de lado si no caben */
+.armario ul {
+    display: flex;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0 0 0.25rem;
+    list-style: none;
+    overflow-x: auto;
+}
+
+.armario li {
+    position: relative;
+    flex: none;
+}
+
+.miniatura {
+    display: block;
+    width: 4.5rem;
+    height: 6rem;
+    padding: 0.25rem;
+    border: 2px solid transparent;
+    border-radius: 0.75rem;
+    background: var(--silueta);
+    cursor: pointer;
+}
+
+.miniatura[aria-pressed='true'] {
+    border-color: var(--acento);
+}
+
+.miniatura img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.tirar {
+    position: absolute;
+    top: 0.15rem;
+    right: 0.15rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 0;
+    border-radius: 50%;
+    background: var(--fondo);
+    color: var(--texto);
+    font: inherit;
+    line-height: 1;
+    cursor: pointer;
+}
+
 .enlace-cuerpo {
     color: var(--texto-suave);
 }

@@ -30,8 +30,12 @@ abre una forma de cubrir costes: Shein tiene programa de afiliados. Inditex, has
 no lo tiene.
 
 Todo sigue guardado en el dispositivo, sin cuentas y sin servidor: leer el enlace de la tienda se
-descartó porque las tiendas lo bloquean. El maniquí 2D actual basta para comprobar si la idea sirve;
-el cuerpo 3D (`#cuerpo`) pasa a ser una mejora, no la base.
+descartó porque las tiendas lo bloquean.
+
+**Solo el maniquí 3D** (decidido el 14 de octubre de 2026, por la tarde). Se quita la silueta 2D: la
+foto de cada prenda se pone como tela de una prenda 3D del catálogo de MakeHuman (camiseta o
+pantalón), proyectada de frente, sobre el cuerpo ajustable. Se ve más real y al girar no es plana; a
+cambio, la forma de la prenda es la del catálogo, no la tuya, y solo hay las formas que trae.
 
 Dedicación prevista: 5–10 horas a la semana. Objetivo: probarla con amigas y que el proyecto pague
 sus costes.
@@ -55,6 +59,11 @@ sus costes.
   meses. Se descarta si la mediana queda por debajo de 10 prendas.
 - [ ] **Abren la app antes de salir.** Se descarta si menos de 3 de 8 probadoras la usan por
   iniciativa propia antes de un evento real en 90 días.
+- [ ] **Una foto real da una tela creíble sobre la prenda 3D.** Probado solo con imágenes de prueba
+  (rayas y estrella, vaquero con costuras): de frente encaja, por los costados se estira un poco y la
+  espalda repite el frente. Falta con fotos reales: una prenda lisa, una de tejido marcado y una con
+  estampado grande. Una camiseta extendida tiene las mangas abiertas y la 3D las lleva caídas, así
+  que las mangas son lo primero que puede fallar.
 - [x] **El cuerpo 3D conserva sus controles de forma al llevarlo a la web.** Comprobado el 14 de
   octubre de 2026: los cuerpos de MakeHuman se exportan con sus formas (unos 2,4 MB cada uno) y los
   controles los deforman en el navegador, pelo incluido. Ver `modelos/cuerpo.py` y la pantalla
@@ -64,10 +73,15 @@ sus costes.
 
 Fase A, el armario que se llena solo:
 
-- Añadir una prenda por foto (ya funciona) o por captura de la tienda, con su tipo (arriba o abajo).
+Hecho el 14 de octubre de 2026:
+
+- Añadir una prenda por foto o por captura de la tienda, con su tipo (arriba o abajo).
 - Guardar las prendas en el dispositivo, para que no se pierdan al cerrar la página.
-- Vestir el maniquí 2D eligiendo del armario guardado.
+- Vestir el maniquí 3D eligiendo del armario guardado, con la foto como tela de la prenda.
 - Guardar el conjunto elegido con un nombre de ocasión, y poder volver a él.
+
+Falta: un vestido 3D. Se quitó el hueco «vestido» al pasar a solo 3D porque el catálogo libre de
+MakeHuman no trae ninguno a mano; es lo más importante para cenas y eventos.
 
 Fase B, ¿me lo compro? (solo si A se usa):
 
@@ -76,8 +90,7 @@ Fase B, ¿me lo compro? (solo si A se usa):
 
 ## Lo que no vamos a hacer, y por qué
 
-- **Prendas 3D sobre el cuerpo 3D, por ahora.** Es lo más caro y no hace falta para saber si la app
-  sirve. El cuerpo 3D ya existe y se retoma cuando A funcione.
+- **La silueta 2D.** Se quitó al pasar a solo 3D.
 - **Importar los pedidos desde el correo.** Llenaría el armario de golpe, pero obliga a pedir
   acceso al correo y a tener servidor, justo lo contrario de la privacidad que se ofrece.
 - **Votación de conjuntos por WhatsApp.** Era la única variante con difusión propia; para probar

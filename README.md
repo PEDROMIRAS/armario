@@ -3,16 +3,13 @@
 Aplicación web para móvil con la que fotografías tu ropa y combinas conjuntos sobre un maniquí,
 sin tener que probártela.
 
-**Estado: pruebas iniciales.** Hay dos pantallas sueltas, todavía sin unir:
-
-- **Fotos**: eliges o haces una foto de una prenda (parte de arriba, parte de abajo o vestido), le quita el
-  fondo y la coloca sobre una silueta. Cada prenda queda guardada en el propio móvil, en «Tu
-  armario», para volver a ponértela o borrarla, y lo que llevas se puede guardar como conjunto
-  con el nombre de la ocasión («Cena de Laura») para volver a él con un toque. Safari puede borrar lo guardado si pasas semanas sin
-  abrir la web, salvo que la añadas a la pantalla de inicio.
-- **Maniquí 3D** (`#cuerpo`): eliges cuerpo de mujer o de hombre, cada uno con pelo, lo ajustas en
-  altura y complexión, y lo giras arrastrando. Lleva una camiseta y un pantalón de prueba, de color
-  fijo, que cambian de forma con el cuerpo y se ponen y se quitan por separado.
+**Estado: pruebas iniciales.** Una sola pantalla con un maniquí 3D: eliges cuerpo de mujer o de
+hombre, lo ajustas en altura y complexión y lo giras arrastrando. Le pones ropa con fotos: eliges o
+haces una foto de una parte de arriba o de abajo, la app le quita el fondo y la pone como tela de la
+camiseta o del pantalón 3D. Cada prenda queda guardada en el propio móvil, en «Tu armario», para
+volver a ponértela o borrarla, y lo que llevas se puede guardar como conjunto con el nombre de la
+ocasión («Cena de Laura») para volver a él con un toque. Safari puede borrar lo guardado si pasas
+semanas sin abrir la web, salvo que la añadas a la pantalla de inicio.
 
 Demo: <https://pedromiras.github.io/armario/>
 
@@ -21,10 +18,13 @@ Demo: <https://pedromiras.github.io/armario/>
 1. La foto se reduce a 1280 px de lado como máximo.
 2. Un modelo de IA le quita el fondo **en el propio dispositivo**: la foto no se envía a ningún
    servidor. Lo único que se descarga, la primera vez, es el modelo (varias decenas de MB).
-3. La prenda se recorta a su tamaño real y se coloca en su hueco del maniquí.
+3. La prenda se recorta a su tamaño real y se mide el ancho de su cuerpo (el bajo de una camiseta,
+   la cintura de un pantalón).
+4. La foto se proyecta de frente sobre la prenda 3D, haciendo coincidir esa medida con la de la
+   malla. Lo que la foto no cubre toma su color medio, y la espalda repite el dibujo del frente.
 
-El código de esos pasos está en [src/recorte.js](src/recorte.js); la pantalla, en
-[src/App.jsx](src/App.jsx).
+El código está en [src/recorte.js](src/recorte.js) (pasos 1 a 3) y [src/textura.js](src/textura.js)
+(paso 4); la pantalla, en [src/App.jsx](src/App.jsx).
 
 ## El cuerpo 3D
 
@@ -49,17 +49,16 @@ paquete de recursos libres de MakeHuman
 MAKEHUMAN_ASSETS=/ruta/al/paquete blender -b --python modelos/cuerpo.py
 ```
 
-La pantalla está en [src/Cuerpo.jsx](src/Cuerpo.jsx).
+El maniquí está en [src/Cuerpo.jsx](src/Cuerpo.jsx).
 
 ## Plan
 
 La idea completa, con lo que se va a comprobar y lo que queda fuera, está en
 [docs/ideas/armario-virtual.md](docs/ideas/armario-virtual.md).
 
-1. El armario que se llena solo: añadir prendas por foto o por captura de la tienda al usarlas,
-   guardarlas en el dispositivo y guardar los conjuntos que te pones.
-2. ¿Me lo compro?: ver una prenda de una tienda combinada con las que ya tienes.
-3. Más adelante, prendas 3D sobre el maniquí 3D.
+1. El armario que se llena solo, sobre el maniquí 3D: hecho, falta probarlo con gente.
+2. Más formas de prenda del catálogo de MakeHuman, empezando por un vestido.
+3. ¿Me lo compro?: ver una prenda de una tienda combinada con las que ya tienes.
 
 ## Tecnología
 
@@ -74,7 +73,7 @@ La idea completa, con lo que se va a comprobar y lo que queda fuera, está en
 ```bash
 npm install
 npm run dev     # servidor de desarrollo
-npm test        # tests de la lógica de recorte
+npm test        # tests del recorte, la proyección de la foto y las formas
 npm run build   # versión de producción en dist/
 ```
 

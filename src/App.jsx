@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { quitarFondo } from './recorte.js';
-import { HUECOS, vestir } from './huecos.js';
+import { HUECOS } from './huecos.js';
 import * as almacen from './almacen.js';
 import './App.css';
+
+// El 3D pesa (three.js): se descarga aparte para que la página aparezca antes
+const Cuerpo = lazy(() => import('./Cuerpo.jsx'));
 
 // Lo que llevas puesto (hueco -> id de la prenda) se recuerda entre visitas
 const leerPuestas = () => {
@@ -50,7 +53,7 @@ export default function App() {
             const prenda = { hueco: hueco.id, ...(await quitarFondo(foto, setEstado, hueco.referencia)) };
             const id = await guardarEn(almacen.prendas, prenda);
             setArmario((antes) => [...antes, conUrl({ ...prenda, id })]);
-            setPuestas((antes) => vestir(antes, hueco, id));
+            setPuestas((antes) => ({ ...antes, [hueco.id]: id }));
             setEstado('');
         } catch (error) {
             // El error del navegador es técnico y en inglés: va a la consola, y en pantalla solo qué hacer
@@ -62,7 +65,7 @@ export default function App() {
 
     // Tocar una prenda guardada te la pone; si ya la llevas, te la quita
     const alternar = (hueco, prenda) => setPuestas((antes) => {
-        if (antes[hueco.id] !== prenda.id) return vestir(antes, hueco, prenda.id);
+        if (antes[hueco.id] !== prenda.id) return { ...antes, [hueco.id]: prenda.id };
         const { [hueco.id]: _, ...resto } = antes;
         return resto;
     });
@@ -94,7 +97,12 @@ export default function App() {
         setConjuntos((antes) => antes.filter((c) => c !== conjunto));
     };
 
-    const llevasAlgo = HUECOS.some(({ id }) => armario.some((p) => p.id === puestas[id]));
+    // Lo que lleva puesto el maniquí, por malla del catálogo, con la franja donde se midió cada foto
+    const vestido = useMemo(() => Object.fromEntries(HUECOS.flatMap(({ id, malla, referencia }) => {
+        const prenda = armario.find((p) => p.id === puestas[id]);
+        return prenda ? [[malla, { ...prenda, referencia }]] : [];
+    })), [armario, puestas]);
+    const llevasAlgo = Object.keys(vestido).length > 0;
 
     return (
         <main>
@@ -104,29 +112,9 @@ export default function App() {
                 sale la prenda sola, sin modelo (en Zara suele ser la última).
             </p>
 
-            <div className="maniqui">
-                <svg viewBox="0 0 100 200" aria-hidden="true">
-                    <circle cx="50" cy="16" r="11" />
-                    <path d="M44 27h12v6l18 5 8 46-9 2-6-30v36H33V56l-6 30-9-2 8-46 18-5z" />
-                    <path d="M33 90h34l3 104H54l-4-78-4 78H30z" />
-                </svg>
-                {/* La de abajo va primero para que la de arriba quede por encima, como una camiseta por fuera */}
-                {[...HUECOS].reverse().map(({ id, nombre, ancho, alto }) => {
-                    const prenda = armario.find((p) => p.id === puestas[id]);
-                    if (!prenda) return null;
-                    const anchoImagen = ancho / prenda.ancho;
-                    return (
-                        <img
-                            key={id}
-                            src={prenda.url}
-                            alt={nombre}
-                            className="prenda"
-                            // El centro del cuerpo de la prenda, no el de la foto, va al centro del maniquí
-                            style={{ width: `${anchoImagen}%`, top: `${alto}%`, left: `${50 - prenda.centro * anchoImagen}%` }}
-                        />
-                    );
-                })}
-            </div>
+            <Suspense fallback={<p className="estado">Cargando el maniquí…</p>}>
+                <Cuerpo prendas={vestido} />
+            </Suspense>
 
             <p role="status" className="estado">{estado}</p>
 
@@ -196,7 +184,6 @@ export default function App() {
                 </section>
             )}
 
-            <a href="#cuerpo" className="enlace-cuerpo">Probar el maniquí en 3D</a>
         </main>
     );
 }

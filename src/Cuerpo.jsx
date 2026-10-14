@@ -5,6 +5,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { formas, extremoY } from './formas.js';
 import { HUECOS } from './huecos.js';
 import { trozoDeTela, quitarLuz, envoltura } from './textura.js';
+import { crearHabitacion } from './habitacion.js';
 import './Cuerpo.css';
 
 // Un archivo por cuerpo base; cada uno trae las formas bajo, alto, delgado y corpulento (modelos/cuerpo.py)
@@ -88,14 +89,9 @@ export default function Cuerpo({ prendas, alCargar }) {
         camara.lookAt(0, 1, 0);
         escena.current.add(maniqui.current);
 
-        // La habitación (modelos/habitacion.py): se carga una vez y no cambia con el cuerpo
-        let habitacion, cerrado = false;
-        new GLTFLoader().load(`${import.meta.env.BASE_URL}modelos/habitacion.glb`, (gltf) => {
-            if (cerrado) return;
-            habitacion = gltf.scene;
-            escena.current.add(habitacion);
-            pintar.current();
-        }, undefined, console.error); // sin habitación el maniquí se sigue viendo, sobre el fondo de la página
+        // La habitación no cambia con el cuerpo
+        const habitacion = crearHabitacion();
+        escena.current.add(habitacion);
         // La luz de una habitación por todos lados, que marca los pliegues, y un foco que da volumen
         const generador = new THREE.PMREMGenerator(renderer);
         const entorno = generador.fromScene(new RoomEnvironment(), 0.04).texture;
@@ -147,13 +143,12 @@ export default function Cuerpo({ prendas, alCargar }) {
         observador.observe(canvas);
 
         return () => {
-            cerrado = true;
             observador.disconnect();
             canvas.removeEventListener('pointerdown', empezar);
             canvas.removeEventListener('pointermove', mover);
             canvas.removeEventListener('pointerup', soltar);
             canvas.removeEventListener('pointercancel', soltar);
-            habitacion?.traverse((objeto) => {
+            habitacion.traverse((objeto) => {
                 if (!objeto.isMesh) return;
                 objeto.geometry.dispose();
                 objeto.material.dispose();

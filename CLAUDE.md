@@ -19,7 +19,7 @@ sus costes. Demo: <https://pedromiras.github.io/armario/>
 
 Una sola pantalla (`src/App.jsx`):
 
-- **Habitación** (`modelos/habitacion.py` → `habitacion.glb`): fija, con un armario abierto aún sin
+- **Habitación** (`src/habitacion.js`, piezas de three.js, sin Blender): un dormitorio fijo, con un armario abierto aún sin
   perchas. Al arrastrar gira el maniquí, no la cámara. Las medidas se piden una vez al entrar.
 - **Maniquí 3D** (`src/Cuerpo.jsx`): cuerpos de mujer y hombre de MakeHuman (CC0) con altura y
   complexión. Los `.glb` de `public/modelos/` los genera `modelos/cuerpo.py` con Blender 5 y MPFB,

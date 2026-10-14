@@ -60,12 +60,9 @@ MAKEHUMAN_ASSETS=/ruta/al/paquete blender -b --python modelos/cuerpo.py
 
 El maniquí está en [src/Cuerpo.jsx](src/Cuerpo.jsx). Está de pie en un dormitorio (suelo
 de tablas, una ventana con cortinas, una cama, una mesilla con lámpara, una planta, un cuadro, una
-alfombra y un armario abierto), `public/modelos/habitacion.glb` (350 KB),
-que genera [modelos/habitacion.py](modelos/habitacion.py) con colores lisos y sin recursos externos:
-
-```bash
-blender -b --python modelos/habitacion.py
-```
+alfombra y un armario abierto), hecho con piezas de three.js en
+[src/habitacion.js](src/habitacion.js): no se descarga nada y se edita sin Blender. La lámpara da
+luz cálida a su alrededor, pero no llega al maniquí, para no cambiar el color de la ropa.
 
 La cámara se queda quieta delante; al arrastrar gira el maniquí, como al darte la vuelta delante
 de un espejo.

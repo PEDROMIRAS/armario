@@ -97,6 +97,15 @@ Fase B, ¿me lo compro? (solo si A se usa):
 - ¿Da el programa de afiliados de Shein acceso oficial a las imágenes de producto?
 - ¿Las fotos de tienda dan problemas de derechos si se guardan solo en el móvil de quien las usa?
   Probablemente no, pero hay que confirmarlo antes de la fase B.
+- ¿De dónde salen las prendas 3D? **Del catálogo libre de MakeHuman siempre que se pueda.**
+  Comprobado el 14 de octubre de 2026 con un conjunto entero por cuerpo: siguen al cuerpo en los
+  extremos de altura y complexión, porque MakeHuman reajusta la prenda a cada forma igual que el
+  pelo. La tela ceñida deja asomar el cuerpo, y se resuelve como en MakeHuman: cada prenda dice qué
+  parte del cuerpo tapa, y esa parte no se pinta. El paquete oficial libre (CC0) trae sobre
+  todo conjuntos enteros (traje informal, deportivo, elegante) y zapatos, no prendas sueltas. Casi
+  todos vienen en dos piezas sin unir, la de arriba y el pantalón, y se separan solas al generar el
+  modelo: así salen la camiseta y el pantalón del alcance mínimo. El pantalón es el mismo en casi
+  todos; las partes de arriba son distintas y sirven para ampliar el catálogo sin salir del paquete.
 
 ## Direcciones que se valoraron
 

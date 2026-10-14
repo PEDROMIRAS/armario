@@ -42,18 +42,91 @@ test('quitar la luz iguala lo claro y lo oscuro, pero deja las rayas', () => {
     assert.ok(raya(20) - raya(21) > 50, 'las rayas siguen');
 });
 
-test('la tela envuelve la prenda a su tamaño real', () => {
-    // Un "cuerpo" de 0,4 m de ancho, de y = 1 a y = 0, y un trozo de tela de la mitad de ese ancho (0,2 m)
-    const posiciones = new Float32Array([
-        0, 1, 0.2, // frente, arriba
-        0, 0, 0.2, // frente, abajo
-        0.2, 0.5, 0, // costado
-        -0.2, 0.5, 0, // otro costado
-        0, 0.5, -0.2, // espalda
-    ]);
-    const uv = [...envoltura(posiciones, [0, 1], 0.5)].map((x) => Math.round(x * 100) / 100);
-    // De arriba abajo hay 1 m: 5 trozos. Del frente a cada costado, un cuarto de vuelta (0,31 m): 1,57 trozos.
-    assert.deepEqual(uv, [0, 0, 0, 5, 1.57, 2.5, 1.57, 2.5, 3.14, 2.5]);
+// Un tubo de 1 m de alto con un anillo de `vuelta` vértices cada 5 cm, unidos en triángulos, de sección
+// elíptica: `a` de lado y `b` de fondo. El vértice 0 de cada anillo es el centro del frente; el de un cuarto
+// de vuelta, el costado; el de media vuelta, la espalda.
+const VUELTA = 64;
+// De `y0` a `y1`. Abierto, solo la mitad de delante, de costado a costado: como una espalda al aire.
+const tubo = ({ a = 0.15, b = 0.1, x = 0, centro = () => 0, vuelta = VUELTA, y0 = 0, y1 = 1, abierto = false } = {}) => {
+    const posiciones = [], indices = [];
+    const pasos = abierto ? vuelta / 2 + 1 : vuelta;
+    for (let n = 0; n <= 20; n++) {
+        const y = y0 + ((y1 - y0) * n) / 20;
+        for (let k = 0; k < pasos; k++) {
+            const s = (2 * Math.PI * (abierto ? k - vuelta / 4 : k)) / vuelta;
+            posiciones.push(x + a * Math.sin(s), y, centro(y) + b * Math.cos(s));
+            if (n === 0 || (abierto && k === pasos - 1)) continue;
+            const p = (n - 1) * pasos + k, q = (n - 1) * pasos + ((k + 1) % pasos);
+            indices.push(p, q, p + pasos, q, q + pasos, p + pasos);
+        }
+    }
+    return { posiciones, indices };
+};
+// Varios tubos en una sola malla
+const juntos = (...tubos) => tubos.reduce((malla, { posiciones, indices }) => ({
+    posiciones: [...malla.posiciones, ...posiciones],
+    indices: [...malla.indices, ...indices.map((i) => i + malla.posiciones.length / 3)],
+}), { posiciones: [], indices: [] });
+const envolver = ({ posiciones, indices }, referencia, proporcion) => envoltura(new Float32Array(posiciones), indices, referencia, proporcion);
+// Lo que ocupa el anillo n en las uv (u, v de cada vértice) y en las posiciones
+const anillo = (lista, n, porVertice, vuelta = VUELTA) => lista.slice(n * vuelta * porVertice, (n + 1) * vuelta * porVertice);
+const distancia = (p, i, j) => Math.hypot(p[i * 3] - p[j * 3], p[i * 3 + 1] - p[j * 3 + 1], p[i * 3 + 2] - p[j * 3 + 2]);
+
+test('la tela envuelve la prenda a su tamaño real: la foto es la prenda extendida, la mitad de su contorno', () => {
+    const malla = tubo(), posiciones = malla.posiciones;
+    // El contorno medido sobre el propio anillo
+    let contorno = 0;
+    for (let k = 0; k < VUELTA; k++) contorno += distancia(posiciones, k, (k + 1) % VUELTA);
+    // El trozo de tela mide un cuarto del ancho de la prenda extendida: 4 trozos de frente a espalda
+    const lado = (contorno / 2) * 0.25;
+    const uv = envolver(malla, [0, 1], 0.25);
+    const medio = anillo(uv, 10, 2), puntos = anillo(posiciones, 10, 3);
+    assert.ok(Math.abs(medio[0]) < 0.01, 'el frente empieza en 0');
+    assert.ok(Math.abs(medio[16 * 2] - 2) < 0.05, `al costado, 2 trozos (${medio[32]})`);
+    assert.ok(Math.abs(medio[32 * 2] - 4) < 0.05, `a la espalda, 4 trozos (${medio[64]})`);
+    // La tela no se aprieta en el frente ni se estira en el costado: cada tramo del anillo lleva su largo de tela
+    for (let k = 0; k < 32; k++) {
+        const tela = (medio[(k + 1) * 2] - medio[k * 2]) * lado;
+        const real = distancia(puntos, k, k + 1);
+        assert.ok(Math.abs(tela / real - 1) < 0.03, `tramo ${k}: ${tela.toFixed(4)} m de tela para ${real.toFixed(4)} m de prenda`);
+    }
+    // De arriba abajo, también a su tamaño: el anillo 10 está 0,5 m por debajo del borde de arriba
+    assert.ok(Math.abs(medio[1] - 0.5 / lado) < 0.01);
+});
+
+test('la tela no se aprieta donde la prenda se echa atrás, como en la cadera', () => {
+    // Un tubo que abajo queda 6 cm más atrás que arriba, medido arriba
+    const malla = tubo({ centro: (y) => -0.06 * (1 - y) }), posiciones = malla.posiciones;
+    const uv = envolver(malla, [0, 0.2], 0.25);
+    for (const n of [4, 16]) {
+        const medio = anillo(uv, n, 2), puntos = anillo(posiciones, n, 3);
+        assert.ok(Math.abs(medio[0]) < 0.01 && Math.abs(medio[64] - 4) < 0.1, `anillo ${n}: frente en 0 y espalda en 4`);
+        const frente = medio[2] / (medio[16 * 2] / 16); // primer tramo del frente frente al promedio hasta el costado
+        assert.ok(Math.abs(frente - distancia(puntos, 0, 1) / (distancia(puntos, 0, 16) / 16)) < 0.15, `anillo ${n}: ${frente}`);
+    }
+});
+
+test('las mangas no cuentan para la escala aunque vayan a 1 cm, y unas piernas sueltas también se envuelven', () => {
+    // El tronco y, a 1 cm de cada costado, un brazo de 8 cm de grueso
+    const malla = juntos(tubo(), tubo({ a: 0.04, b: 0.04, x: 0.2 }), tubo({ a: 0.04, b: 0.04, x: -0.2 }));
+    assert.ok(Math.abs(anillo(envolver(malla, [0, 1], 0.25), 10, 2)[64] - 4) < 0.05, 'la espalda del tronco sigue a 4 trozos');
+    // Dos piernas sin tronco: entre ellas no hay centro
+    const piernas = envolver(juntos(tubo({ a: 0.06, b: 0.06, x: 0.09 }), tubo({ a: 0.06, b: 0.06, x: -0.09 })), [0, 1], 0.25);
+    assert.ok(piernas.every(Number.isFinite));
+});
+
+test('con la espalda al aire en la franja de la foto, la escala sale de la parte cerrada más cercana', () => {
+    // Cerrado hasta 0,7 m y, de ahí arriba, solo por delante; la foto se midió arriba, en lo abierto
+    const malla = juntos(tubo({ y1: 0.7 }), tubo({ y0: 0.7, abierto: true }));
+    const espalda = anillo(envolver(malla, [0, 0.2], 0.25), 10, 2)[64];
+    assert.ok(Math.abs(espalda - 4) < 0.05, `la espalda de la parte cerrada, a 4 trozos (${espalda})`);
+});
+
+test('una malla basta, con vértices a 6 cm, se envuelve igual', () => {
+    // 16 vértices por vuelta: entre uno y otro del frente quedan 6 cm
+    const uv = envolver(tubo({ vuelta: 16 }), [0, 1], 0.25);
+    const medio = anillo(uv, 10, 2, 16);
+    assert.ok(Math.abs(medio[0]) < 0.01 && Math.abs(medio[4 * 2] - 2) < 0.05 && Math.abs(medio[8 * 2] - 4) < 0.05, `frente, costado y espalda: ${medio[0]}, ${medio[8]}, ${medio[16]}`);
 });
 
 test('el relieve es plano en una tela lisa y se inclina hacia lo oscuro en una rampa', () => {

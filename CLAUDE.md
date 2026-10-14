@@ -29,7 +29,8 @@ Una sola pantalla (`src/App.jsx`):
   relieve (`src/textura.js`). No se usa la foto entera: su forma nunca coincide.
 - **Catálogo**: 15 formas de mujer y 5 de hombre (camiseta, blusa, vaqueros, falda de tubo, vestido de
   cóctel…), de los paquetes de ropa de MakeHuman. Cada una en su `.glb` con la máscara de la piel que
-  tapa, y la lista en `public/modelos/mujer.json`. La forma se elige en «Añadir prenda».
+  tapa, y la lista en `public/modelos/mujer.json`. La forma se elige en «Añadir prenda». La parte de
+  arriba va siempre por fuera: lo que tapa del pantalón o la falda no se pinta.
 - **Luz**: una foto 360° neutra (`public/luz.hdr`), sombras del foco y tela con brillo de tejido.
 - **Armario y conjuntos**: se guardan en el móvil, en IndexedDB (`src/almacen.js`).
 - **Huecos** (`src/huecos.js`): arriba, abajo y vestido. Solo se ofrece un hueco si el cuerpo tiene

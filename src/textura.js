@@ -87,44 +87,122 @@ export function quitarLuz(pixeles, lado, radio = Math.max(2, Math.round(lado / 5
     }
 }
 
+// La prenda se mide por rodajas horizontales de este alto, en metros
+const RODAJA = 0.02;
+
+/** Longitud de la elipse de semiejes `a` (de lado) y `b` (de fondo) desde el frente hasta el ángulo `t` (0 a π). */
+const arco = (a, b, t) => {
+    // La elipse es suave: con la regla de Simpson y 8 tramos el error es de milímetros
+    const paso = t / 8, largo = (s) => Math.hypot(a * Math.cos(s), b * Math.sin(s));
+    let suma = largo(0) + largo(t);
+    for (let k = 1; k < 8; k++) suma += (k % 2 ? 4 : 2) * largo(k * paso);
+    return (suma * paso) / 3;
+};
+
 /**
  * Coordenadas de textura (u, v por vértice) que envuelven la prenda con el trozo de tela repetido.
- * Envuelve alrededor del eje vertical, como un cilindro, para que el costado y la espalda lleven la
- * misma tela que el frente sin estirarse.
+ * Cada rodaja de la prenda se toma por una elipse de su ancho y su fondo, centrada en ella, y u es lo
+ * recorrido sobre esa elipse desde el frente: así la tela va a su tamaño en el frente, el costado y la
+ * espalda, también donde el cuerpo se ensancha o se echa atrás (la cadera, el pecho). Las mangas no
+ * cuentan para la elipse; entre las piernas, que no tienen tronco, cuenta toda la rodaja.
  * @param {Float32Array} posiciones - x, y, z de cada vértice, en metros.
+ * @param {ArrayLike<number>|null} indices - Los vértices de cada triángulo, de tres en tres (null: en orden).
  * @param {number[]} referencia - Franja [desde, hasta] de la prenda, de 0 (arriba) a 1 (abajo), donde
  *   se midió el ancho de su cuerpo en la foto.
- * @param {number} proporcion - Lado del trozo de tela dividido por ese ancho, los dos en la foto.
+ * @param {number} proporcion - Lado del trozo de tela dividido por ese ancho, los dos en la foto. La
+ *   prenda sale extendida en la foto, así que ese ancho es la mitad de su contorno.
  */
-export function envoltura(posiciones, [desde, hasta], proporcion) {
-    let arriba = -Infinity, abajo = Infinity;
-    for (let i = 1; i < posiciones.length; i += 3) {
-        arriba = Math.max(arriba, posiciones[i]);
-        abajo = Math.min(abajo, posiciones[i]);
-    }
-    const alto = arriba - abajo;
-
-    // El cuerpo de la malla en la misma franja que la foto: su ancho da la escala y su centro, el eje
-    let izquierda = Infinity, derecha = -Infinity, delante = -Infinity, detras = Infinity;
+export function envoltura(posiciones, indices, [desde, hasta], proporcion) {
+    let arriba = -Infinity, abajo = Infinity, izquierda = Infinity, derecha = -Infinity;
     for (let i = 0; i < posiciones.length; i += 3) {
-        const y = posiciones[i + 1];
-        if (y > arriba - alto * desde || y < arriba - alto * hasta) continue;
+        arriba = Math.max(arriba, posiciones[i + 1]);
+        abajo = Math.min(abajo, posiciones[i + 1]);
         izquierda = Math.min(izquierda, posiciones[i]);
         derecha = Math.max(derecha, posiciones[i]);
-        delante = Math.max(delante, posiciones[i + 2]);
-        detras = Math.min(detras, posiciones[i + 2]);
     }
-    const ancho = derecha - izquierda;
-    const lado = ancho * proporcion; // lado del trozo de tela, en metros
-    const ejeX = (izquierda + derecha) / 2, ejeZ = (delante + detras) / 2;
+    const centro = (izquierda + derecha) / 2; // las prendas son simétricas
+    const total = Math.max(1, Math.ceil((arriba - abajo) / RODAJA));
+
+    // El corte de cada rodaja a media altura: por dónde cruzan su plano los triángulos, como tramos
+    // [x, z, x, z]. Con tramos y no con vértices, el corte es continuo aunque la malla sea basta.
+    const cortes = Array.from({ length: total }, () => []);
+    const vertices = indices ?? Array.from({ length: posiciones.length / 3 }, (_, i) => i);
+    for (let t = 0; t < vertices.length; t += 3) {
+        const esquinas = [vertices[t] * 3, vertices[t + 1] * 3, vertices[t + 2] * 3];
+        const ys = esquinas.map((i) => posiciones[i + 1]);
+        const primera = Math.max(0, Math.ceil((arriba - Math.max(...ys)) / RODAJA - 0.5));
+        const ultima = Math.min(total - 1, Math.floor((arriba - Math.min(...ys)) / RODAJA - 0.5));
+        for (let k = primera; k <= ultima; k++) {
+            const y = arriba - (k + 0.5) * RODAJA, tramo = [];
+            for (const [a, b] of [[0, 1], [1, 2], [2, 0]]) {
+                if (ys[a] > y === ys[b] > y) continue;
+                const f = (y - ys[a]) / (ys[b] - ys[a]), i = esquinas[a], j = esquinas[b];
+                tramo.push(posiciones[i] + f * (posiciones[j] - posiciones[i]), posiciones[i + 2] + f * (posiciones[j + 2] - posiciones[i + 2]));
+            }
+            if (tramo.length === 4) cortes[k].push(tramo);
+        }
+    }
+
+    // La elipse de cada rodaja: [x del centro, z del centro, semieje de lado, semieje de fondo]
+    const medidas = cortes.map((tramos) => {
+        if (tramos.length === 0) return null;
+        // Lo que ocupa el corte a lo ancho, en piezas: el tronco es una; cada brazo, otra
+        const piezas = [];
+        for (const [i, d] of tramos.map(([x0, , x1]) => [Math.min(x0, x1), Math.max(x0, x1)]).sort((p, q) => p[0] - q[0])) {
+            const ultima = piezas.at(-1);
+            if (ultima && i <= ultima[1] + 0.001) ultima[1] = Math.max(ultima[1], d);
+            else piezas.push([i, d]);
+        }
+        // La del centro: el tronco, sin los brazos. Entre las piernas no hay ninguna: entonces, todas.
+        const [i, d] = piezas.find(([i, d]) => i <= centro && centro <= d) ?? [piezas[0][0], piezas.at(-1)[1]];
+        let delante = -Infinity, detras = Infinity;
+        for (const [x0, z0, x1, z1] of tramos) {
+            if (x0 >= i && x0 <= d) [delante, detras] = [Math.max(delante, z0), Math.min(detras, z0)];
+            if (x1 >= i && x1 <= d) [delante, detras] = [Math.max(delante, z1), Math.min(detras, z1)];
+        }
+        // Con un mínimo de medio centímetro: un corte de un solo tramo no da elipse
+        return [(i + d) / 2, (delante + detras) / 2, Math.max(0.005, (d - i) / 2), Math.max(0.005, (delante - detras) / 2)];
+    });
+    // Una rodaja sin corte toma la elipse de la de encima (o de la primera que tenga)
+    const alguna = medidas.find(Boolean);
+    let elipses = medidas.map((elipse, k) => elipse ?? medidas.slice(0, k).findLast(Boolean) ?? alguna);
+    // Suavizada con sus vecinas: sin saltos entre rodajas al pasar del hombro al brazo o de la cadera a las piernas
+    elipses = elipses.map((_, k) => {
+        const vecinas = elipses.slice(Math.max(0, k - 2), k + 3);
+        return [0, 1, 2, 3].map((c) => vecinas.reduce((suma, elipse) => suma + elipse[c], 0) / vecinas.length);
+    });
+    // La elipse a la altura de cada vértice, entre las de las dos rodajas más cercanas
+    const elipseEn = (y) => {
+        const f = Math.min(total - 1, Math.max(0, (arriba - y) / RODAJA - 0.5));
+        const k = Math.min(total - 2, Math.floor(f)), peso = f - k;
+        if (k < 0) return elipses[0];
+        return elipses[k].map((valor, c) => valor * (1 - peso) + elipses[k + 1][c] * peso);
+    };
+
+    // La escala: en la franja de la foto, el trozo de tela es `proporcion` de la mitad del contorno. Solo
+    // valen las rodajas cerradas, con tela delante y detrás del centro: en una espalda al aire o entre las
+    // piernas no hay contorno que medir. Si en la franja no hay ninguna, vale la cerrada más cercana. Se
+    // miden sin suavizar, o la de junto a una espalda al aire saldría aplanada por sus vecinas.
+    const cerradas = cortes.map((tramos) => tramos.filter(([x0, , x1]) => x0 < centro !== x1 < centro).length >= 2);
+    const alto = arriba - abajo;
+    const medio = Math.min(total - 1, Math.floor((alto * (desde + hasta)) / 2 / RODAJA));
+    const validas = [...medidas.keys()].filter((k) => cerradas[k]);
+    const enFranja = validas.filter((k) => {
+        const y = arriba - (k + 0.5) * RODAJA;
+        return y <= arriba - alto * desde && y >= arriba - alto * hasta;
+    });
+    const cercana = validas.sort((p, q) => Math.abs(p - medio) - Math.abs(q - medio))[0];
+    const escala = (enFranja.length > 0 ? enFranja : [cercana]).map((k) => medidas[k] ?? elipses[medio]);
+    const semicontorno = escala.reduce((suma, [, , a, b]) => suma + arco(a, b, Math.PI), 0) / escala.length;
+    const lado = semicontorno * proporcion; // lado del trozo de tela, en metros
 
     const uv = new Float32Array((posiciones.length / 3) * 2);
     for (let i = 0, j = 0; i < posiciones.length; i += 3, j += 2) {
-        // Distancia recorrida alrededor del cuerpo desde el frente, medida en un círculo de su mismo ancho.
+        const [x, z, a, b] = elipseEn(posiciones[i + 1]);
         // Sin signo: los dos costados son simétricos y no hay costura en la espalda, donde el ángulo
         // saltaría de +180° a -180° y apretaría muchas repeticiones en un solo triángulo.
-        const angulo = Math.abs(Math.atan2(posiciones[i] - ejeX, posiciones[i + 2] - ejeZ));
-        uv[j] = (angulo * ancho) / 2 / lado;
+        const angulo = Math.abs(Math.atan2((posiciones[i] - x) / a, (posiciones[i + 2] - z) / b));
+        uv[j] = arco(a, b, angulo) / lado;
         uv[j + 1] = (arriba - posiciones[i + 1]) / lado;
     }
     return uv;

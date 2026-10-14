@@ -1,8 +1,8 @@
 # Genera los cuerpos de la app en public/modelos/: el cuerpo base de MakeHuman (CC0) con su piel, cara,
 # pelo y zapatos (mujer.glb, hombre.glb) y, aparte, cada prenda de su catálogo (mujer/<prenda>.glb),
 # todo con una forma por cada extremo de los controles de la app, para mezclarlas en el navegador.
-# Cada prenda lleva también una máscara (mujer/<prenda>.png) con la piel que tapa, y el catálogo de
-# cada cuerpo va en mujer.json.
+# Cada prenda lleva también una máscara (mujer/<prenda>.png) con la piel que tapa y, como coordenadas
+# de textura, las de la piel que tiene debajo. El catálogo de cada cuerpo va en mujer.json.
 #
 # Hace falta Blender 5.x con la extensión MPFB y los paquetes de recursos de MakeHuman (el de sistema
 # y los de ropa que se citan en el README) descomprimidos en una carpeta, que se pasa en MAKEHUMAN_ASSETS.
@@ -15,8 +15,9 @@ import os
 import bmesh
 import bpy
 import numpy as np
-from mathutils import Matrix, Quaternion
+from mathutils import Matrix, Quaternion, Vector
 from mathutils.bvhtree import BVHTree
+from mathutils.interpolate import poly_3d_calc
 from bl_ext.blender_org.mpfb.services.humanservice import HumanService
 from bl_ext.blender_org.mpfb.services.targetservice import TargetService
 
@@ -32,7 +33,8 @@ CUERPOS = {
 # cada hueco es la que se usa para una foto guardada antes de que hubiera catálogo.
 CATALOGO = {
     "mujer": [
-        ("toigo_basic_tucked_t-shirt", "arriba", "Camiseta"),
+        # La camiseta llega a la cadera: la de toigo es para llevarla metida y con vaqueros de tiro bajo deja la tripa al aire
+        ("joepal_crude_t-shirt_female", "arriba", "Camiseta"),
         ("punkduck_v_neck_top", "arriba", "Top de tirantes"),
         ("punkduck_off-shoulder_long-sleeve_top", "arriba", "Blusa de hombros al aire"),
         ("mindfront_knitted_sweater_01", "arriba", "Jersey"),
@@ -190,9 +192,14 @@ def poner_material(malla, material):
     malla.data.materials.append(material)
 
 
-def mascara(cuerpo, caras):
-    """Los píxeles de la textura de la piel que caen en estas caras del cuerpo, más uno de margen."""
+def mascara(cuerpo, caras, tapa=None):
+    """Los píxeles de la textura de la piel que caen en estas caras del cuerpo, más uno de margen. Con
+    `tapa(punto, hacia_fuera)`, solo los píxeles cuyo punto de la piel queda bajo la prenda, sin margen."""
     uv = np.array([esquina.uv[:] for esquina in cuerpo.data.uv_layers.active.data])
+    if tapa:
+        giro = cuerpo.matrix_world.to_3x3()
+        puntos = np.array([cuerpo.matrix_world @ v.co for v in cuerpo.data.vertices])
+        normales = np.array([giro @ v.normal for v in cuerpo.data.vertices])
     tapada = np.zeros((LADO_MASCARA, LADO_MASCARA), bool)
     centros = (np.arange(LADO_MASCARA) + 0.5) / LADO_MASCARA
     for cara in caras:
@@ -205,15 +212,30 @@ def mascara(cuerpo, caras):
             # De qué lado de cada arista del triángulo cae cada píxel: dentro, si de todas del mismo
             lados = [(q[0] - p[0]) * (y - p[1]) - (q[1] - p[1]) * (x - p[0]) for p, q in ((a, b), (b, c), (c, a))]
             dentro = np.logical_and.reduce([l >= 0 for l in lados]) | np.logical_and.reduce([l <= 0 for l in lados])
+            area = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+            if tapa and not area:
+                continue
+            if tapa:
+                # El punto de la piel de cada píxel, por sus pesos en el triángulo: el lado opuesto a cada esquina
+                filas, columnas = np.nonzero(dentro)
+                pesos = np.stack([lados[1][filas, columnas], lados[2][filas, columnas], lados[0][filas, columnas]], 1) / area
+                vertices = [cara.vertices[0], cara.vertices[k], cara.vertices[k + 1]]
+                for fila, columna, punto, normal in zip(filas, columnas, pesos @ puntos[vertices], pesos @ normales[vertices]):
+                    dentro[fila, columna] = tapa(Vector(punto), Vector(normal).normalized())
             tapada[y0:y1, x0:x1] |= dentro
+    if tapa:
+        return tapada
     # Sin margen, en el filo entre una cara tapada y una a la vista podría asomar una línea de piel
     return tapada | np.roll(tapada, 1, 0) | np.roll(tapada, -1, 0) | np.roll(tapada, 1, 1) | np.roll(tapada, -1, 1)
 
 
-def guardar_mascara(tapada, destino):
+def guardar_mascara(tapada, destino, cubierta=None):
+    """En rojo (y azul) la piel que la prenda tapa; en verde, la que cubre píxel a píxel, si se da (las de arriba)."""
     imagen = bpy.data.images.new("mascara", LADO_MASCARA, LADO_MASCARA)
     pixeles = np.zeros((LADO_MASCARA, LADO_MASCARA, 4), np.float32)
-    pixeles[tapada] = 1  # blanco donde la prenda tapa la piel; las filas van de abajo arriba, como la textura
+    # Blanco donde la prenda tapa la piel; las filas van de abajo arriba, como la textura
+    pixeles[tapada, 0] = pixeles[tapada, 2] = 1
+    pixeles[tapada if cubierta is None else cubierta, 1] = 1
     pixeles[..., 3] = 1
     imagen.pixels = pixeles.ravel()
     imagen.filepath_raw = destino
@@ -240,6 +262,7 @@ def exportar(objetos, destino):
 for archivo, (genero, piel, peinado, zapatos) in CUERPOS.items():
     catalogo = CATALOGO[archivo]
     nombres = [prenda for prenda, _, _ in catalogo]
+    huecos = {prenda: hueco for prenda, hueco, _ in catalogo}
     bpy.ops.wm.read_factory_settings(use_empty=True)
     mallas = crear(genero, peinado, zapatos, nombres, {})
     cuerpo, pelo, *cara, calzado = mallas[:ROPA]
@@ -306,7 +329,30 @@ for archivo, (genero, piel, peinado, zapatos) in CUERPOS.items():
             if all(tapa(p, hacia_fuera) for p in puntos):
                 tapadas.append(poligono)
         assert tapadas, nombre  # toda prenda tapa algo de piel: si no, no se ha ajustado al cuerpo
-        guardar_mascara(mascara(cuerpo, tapadas), os.path.join(carpeta, nombre + ".png"))
+        # La de arriba se mira además píxel a píxel y en todo el cuerpo, hasta su mismo bajo: con eso la app
+        # esconde lo que tapa del pantalón o la falda, y el corte no sale en escalones de caras
+        cubierta = mascara(cuerpo, cuerpo.data.polygons, tapa) if huecos[nombre] == "arriba" else None
+        guardar_mascara(mascara(cuerpo, tapadas), os.path.join(carpeta, nombre + ".png"), cubierta)
+
+    # Las coordenadas de textura de la prenda no sirven (la app le pone la tela de la foto): en su lugar,
+    # cada vértice lleva las del punto de la piel que tiene debajo. Con ellas y la máscara de la parte de
+    # arriba, la app esconde lo que esta tapa de la de abajo: si no, la cinturilla del pantalón la atraviesa.
+    cuerpo.data.calc_loop_triangles()
+    triangulos = cuerpo.data.loop_triangles
+    puntos_piel = [cuerpo.matrix_world @ v.co for v in cuerpo.data.vertices]
+    piel = BVHTree.FromPolygons(puntos_piel, [tuple(t.vertices) for t in triangulos])
+    uv_piel = cuerpo.data.uv_layers.active.data
+    for prenda in prendas:
+        debajo = []
+        for vertice in prenda.data.vertices:
+            lugar, _, i, _ = piel.find_nearest(prenda.matrix_world @ vertice.co)
+            triangulo = triangulos[i]
+            pesos = poly_3d_calc([puntos_piel[k] for k in triangulo.vertices], lugar)
+            debajo.append(sum((uv_piel[esquina].uv * peso for esquina, peso in zip(triangulo.loops, pesos)), Vector((0, 0))))
+        assert len(prenda.data.uv_layers) == 1, prenda.name  # la app lee la primera
+        capa = prenda.data.uv_layers.active
+        for esquina in prenda.data.loops:
+            capa.data[esquina.index].uv = debajo[esquina.vertex_index]
 
     for objeto in mallas:
         for modificador in list(objeto.modifiers):

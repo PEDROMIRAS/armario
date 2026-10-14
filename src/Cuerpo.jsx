@@ -65,6 +65,26 @@ const soltar = (malla) => {
     malla.material.dispose();
 };
 
+/** Textura en la que se juntan máscaras de la piel, en el espacio de la textura de la piel. */
+const nuevaMascara = () => {
+    const textura = new THREE.CanvasTexture(Object.assign(document.createElement('canvas'), { width: 512, height: 512 }));
+    textura.flipY = false; // como las texturas del modelo
+    textura.minFilter = textura.magFilter = THREE.NearestFilter;
+    textura.generateMipmaps = false;
+    return textura;
+};
+
+/** Junta en `textura` estas máscaras: lo blanco de cualquiera queda blanco. */
+const juntar = (textura, mascaras) => {
+    const lienzo = textura.image;
+    const pincel = lienzo.getContext('2d');
+    pincel.globalCompositeOperation = 'source-over';
+    pincel.clearRect(0, 0, lienzo.width, lienzo.height);
+    pincel.globalCompositeOperation = 'lighten';
+    for (const imagen of mascaras) pincel.drawImage(imagen, 0, 0, lienzo.width, lienzo.height);
+    textura.needsUpdate = true;
+};
+
 /**
  * Una forma de prenda del catálogo (vaqueros, blusa…) y la máscara de la piel que tapa. Se descarga la primera
  * vez que se pone y se guarda en el modelo para las siguientes.
@@ -73,6 +93,7 @@ const pieza = (modelo, forma) => {
     if (!modelo.ropa.has(forma)) {
         const imagen = new Image();
         imagen.src = `${modelo.url}/${forma}.png`;
+        const hueco = modelo.catalogo.find((f) => f.id === forma)?.hueco;
         modelo.ropa.set(forma, Promise.all([new GLTFLoader().loadAsync(`${modelo.url}/${forma}.glb`), imagen.decode()]).then(([gltf]) => {
             let malla;
             gltf.scene.traverse((objeto) => { if (objeto.isMesh) malla = objeto; });
@@ -82,6 +103,24 @@ const pieza = (modelo, forma) => {
                 roughness: 0.85, sheen: 1, sheenRoughness: 0.6, sheenColor: 0x404040,
                 normalScale: new THREE.Vector2(0.6, 0.6), side: THREE.DoubleSide,
             });
+            // Sus coordenadas de textura son las de la piel que tiene debajo (modelos/cuerpo.py); las de la tela
+            // se le ponen con la foto
+            malla.geometry.setAttribute('piel', malla.geometry.attributes.uv);
+            if (hueco === 'abajo') {
+                // La parte de arriba va por fuera: lo del pantalón o la falda que quede sobre la piel que ella tapa
+                // (el verde de su máscara, mirado píxel a píxel hasta el bajo) no se pinta, o la cinturilla la atraviesa
+                malla.material.onBeforeCompile = (shader) => {
+                    shader.uniforms.tapaArriba = { value: modelo.tapaArriba };
+                    shader.vertexShader = `attribute vec2 piel;\nvarying vec2 vPiel;\n${shader.vertexShader.replace(
+                        '#include <uv_vertex>',
+                        '#include <uv_vertex>\nvPiel = piel;'
+                    )}`;
+                    shader.fragmentShader = `uniform sampler2D tapaArriba;\nvarying vec2 vPiel;\n${shader.fragmentShader.replace(
+                        '#include <map_fragment>',
+                        'if (texture2D(tapaArriba, vPiel).g > 0.5) discard;\n#include <map_fragment>'
+                    )}`;
+                };
+            }
             malla.castShadow = malla.receiveShadow = true;
             malla.visible = false;
             if (modelo.descartado) soltar(malla);
@@ -159,7 +198,7 @@ export default function Cuerpo({ prendas, alCargar }) {
         }, undefined, (error) => { console.error(error); generador.dispose(); });
         // Un foco que da volumen y proyecta la sombra del cuerpo en el suelo y de la ropa sobre sí misma
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.shadowMap.type = THREE.PCFShadowMap; // la suave ya no existe en three.js: también usa esta
         const foco = new THREE.DirectionalLight(0xffffff, 1.2);
         foco.position.set(1.5, 3, 2.5);
         foco.castShadow = true;
@@ -239,11 +278,9 @@ export default function Cuerpo({ prendas, alCargar }) {
             const mallas = [];
             let cuerpo;
             // La piel que tapan las prendas puestas no se pinta: si no, asoma por la tela ceñida. Cada prenda trae
-            // una máscara con la piel que tapa (modelos/cuerpo.py), y las de lo que llevas se juntan en esta textura
-            const tapada = new THREE.CanvasTexture(Object.assign(document.createElement('canvas'), { width: 512, height: 512 }));
-            tapada.flipY = false; // como las texturas del modelo
-            tapada.minFilter = tapada.magFilter = THREE.NearestFilter;
-            tapada.generateMipmaps = false;
+            // una máscara con la piel que tapa (modelos/cuerpo.py), y las de lo que llevas se juntan en esta textura.
+            // En la otra, solo la de la parte de arriba, para no pintar lo que esta tapa del pantalón o la falda.
+            const tapada = nuevaMascara(), tapaArriba = nuevaMascara();
             gltf.scene.traverse((objeto) => {
                 if (!objeto.isMesh) return;
                 mallas.push(objeto);
@@ -282,7 +319,7 @@ export default function Cuerpo({ prendas, alCargar }) {
             maniqui.current.add(gltf.scene);
             // `ropa`: las prendas ya descargadas (forma -> promesa de {malla, mascara}); `influencias`: las formas
             // del cuerpo aplicadas ahora, para ponérselas también a una prenda que llegue después
-            setModelo({ grupo: gltf.scene, mallas, catalogo, url, tapada, ropa: new Map(), influencias: {}, ...medidas });
+            setModelo({ grupo: gltf.scene, mallas, catalogo, url, tapada, tapaArriba, ropa: new Map(), influencias: {}, ...medidas });
             setEstado('');
         }).catch((error) => {
             console.error(error);
@@ -298,6 +335,7 @@ export default function Cuerpo({ prendas, alCargar }) {
         maniqui.current.remove(modelo.grupo);
         for (const malla of modelo.mallas) soltar(malla);
         modelo.tapada.dispose();
+        modelo.tapaArriba.dispose();
     }, [modelo]);
 
     useEffect(() => {
@@ -332,7 +370,7 @@ export default function Cuerpo({ prendas, alCargar }) {
                 if (malla.userData.foto === prenda.id) continue;
                 const { mapa, bultos, proporcion } = await tela(prenda);
                 if (cancelado) { mapa.dispose(); bultos.dispose(); return; }
-                const uv = envoltura(malla.geometry.attributes.position.array, prenda.referencia, proporcion);
+                const uv = envoltura(malla.geometry.attributes.position.array, malla.geometry.index?.array, prenda.referencia, proporcion);
                 malla.geometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
                 malla.material.map?.dispose();
                 malla.material.normalMap?.dispose();
@@ -346,14 +384,8 @@ export default function Cuerpo({ prendas, alCargar }) {
                 const { malla } = await descarga;
                 malla.visible = llevadas.has(forma);
             }
-            // La piel tapada: las máscaras de lo que llevas, juntas (lo blanco de cualquiera queda blanco)
-            const lienzo = modelo.tapada.image;
-            const pincel = lienzo.getContext('2d');
-            pincel.globalCompositeOperation = 'source-over';
-            pincel.clearRect(0, 0, lienzo.width, lienzo.height);
-            pincel.globalCompositeOperation = 'lighten';
-            for (const { mascara } of piezas) pincel.drawImage(mascara, 0, 0, lienzo.width, lienzo.height);
-            modelo.tapada.needsUpdate = true;
+            juntar(modelo.tapada, piezas.map(({ mascara }) => mascara));
+            juntar(modelo.tapaArriba, piezas.filter((_, i) => puestas[i].hueco === 'arriba').map(({ mascara }) => mascara));
             pintar.current();
         })().catch((error) => {
             console.error(error);

@@ -22,7 +22,9 @@ Demo: <https://pedromiras.github.io/armario/>
    la cintura de un pantalón).
 4. De la foto se toma un trozo de tela limpio y uniforme, sin costuras ni botones, y se le quita la
    luz con la que se hizo la foto (pliegues, sombras, brillos). Ese trozo se repite alrededor de la
-   prenda 3D a su tamaño real, como un rollo de tela. Así se ven el color, el tejido y el estampado
+   prenda 3D a su tamaño real, como un rollo de tela: la prenda extendida en la foto mide la mitad de
+   su contorno, y la tela se mide sobre el contorno de la prenda 3D a cada altura, para que no se
+   apriete en el frente ni se estire en los costados. Así se ven el color, el tejido y el estampado
    reales sobre la forma de la prenda del catálogo; lo que se pierde es un dibujo grande en su sitio,
    como un logo en el pecho.
 
@@ -42,7 +44,10 @@ formas según los controles, y el pelo y las prendas llevan las mismas para segu
   mujer y 5 de hombre), con su hueco y su nombre en la app.
 - `public/modelos/mujer/<prenda>.glb` (de 100 KB a 1 MB): cada forma, que la app descarga solo cuando
   te la pones, y `<prenda>.png`, la máscara de la piel que tapa. La app junta las máscaras de lo que
-  llevas y no pinta esa piel: así no asoma por la tela ceñida.
+  llevas y no pinta esa piel: así no asoma por la tela ceñida. Cada vértice de la prenda lleva, como
+  coordenadas de textura, las del punto de la piel que tiene debajo, y la máscara de una parte de
+  arriba trae en verde la piel que cubre mirada píxel a píxel: la parte de arriba va siempre por fuera,
+  y lo que tapa del pantalón o la falda no se pinta, para que la cinturilla no la atraviese.
 
 Para regenerarlos hace falta [Blender](https://www.blender.org/) 5 con la extensión MPFB y los
 paquetes de recursos de MakeHuman descomprimidos en una misma carpeta: el de sistema

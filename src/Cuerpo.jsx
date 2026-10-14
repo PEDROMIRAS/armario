@@ -82,9 +82,10 @@ export default function Cuerpo({ prendas, alCargar }) {
         renderer.toneMapping = THREE.NeutralToneMapping;
         escena.current = new THREE.Scene();
         // La cámara se queda quieta delante, como un espejo; lo que gira es el maniquí
-        const camara = new THREE.PerspectiveCamera(38, 1, 0.1, 20);
-        camara.position.set(0, 1.15, 3.6);
-        camara.lookAt(0, 0.95, 0);
+        // Algo alejada y abierta, para que se vea la habitación alrededor
+        const camara = new THREE.PerspectiveCamera(42, 1, 0.1, 20);
+        camara.position.set(0, 1.25, 3.9);
+        camara.lookAt(0, 1, 0);
         escena.current.add(maniqui.current);
 
         // La habitación (modelos/habitacion.py): se carga una vez y no cambia con el cuerpo
@@ -116,7 +117,7 @@ export default function Cuerpo({ prendas, alCargar }) {
             new THREE.PlaneGeometry(0.9, 0.9).rotateX(-Math.PI / 2),
             new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(degradado), transparent: true, depthWrite: false })
         );
-        sombra.position.y = 0.011; // justo encima de la alfombra
+        sombra.position.y = 0.01; // justo encima de la alfombra, que mide 8 mm
         escena.current.add(sombra);
 
         // Se pinta solo cuando algo cambia, no en cada fotograma: ahorra batería en el móvil

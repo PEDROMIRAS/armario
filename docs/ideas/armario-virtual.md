@@ -59,11 +59,13 @@ sus costes.
   meses. Se descarta si la mediana queda por debajo de 10 prendas.
 - [ ] **Abren la app antes de salir.** Se descarta si menos de 3 de 8 probadoras la usan por
   iniciativa propia antes de un evento real en 90 días.
-- [ ] **Una foto real da una tela creíble sobre la prenda 3D.** Probado solo con imágenes de prueba
-  (rayas y estrella, vaquero con costuras): de frente encaja, por los costados se estira un poco y la
-  espalda repite el frente. Falta con fotos reales: una prenda lisa, una de tejido marcado y una con
-  estampado grande. Una camiseta extendida tiene las mangas abiertas y la 3D las lleva caídas, así
-  que las mangas son lo primero que puede fallar.
+- [ ] **Una foto real da una tela creíble sobre la prenda 3D.** Primer intento, proyectar la foto
+  entera de frente: no vale, porque su forma (cuello, mangas, prenda extendida, modelo) nunca coincide
+  con la de la prenda 3D. Segundo, el actual: un trozo de tela limpio y uniforme de la foto, sin la luz
+  de la foto, repetido alrededor de la prenda a su tamaño real. Con fotos de Zara con modelo y con
+  imágenes de prueba de rayas y vaquero queda limpio por delante, por los lados y por detrás. Falta
+  con prendas de verdad: una lisa, una de tejido marcado y una con estampado grande. Se pierde el
+  dibujo grande en su sitio (un logo en el pecho). Lo blanco sobre fondo blanco se pierde al recortar.
 - [x] **El cuerpo 3D conserva sus controles de forma al llevarlo a la web.** Comprobado el 14 de
   octubre de 2026: los cuerpos de MakeHuman se exportan con sus formas (unos 2,4 MB cada uno) y los
   controles los deforman en el navegador, pelo incluido. Ver `modelos/cuerpo.py` y la pantalla

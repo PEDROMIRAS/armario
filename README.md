@@ -20,8 +20,11 @@ Demo: <https://pedromiras.github.io/armario/>
    servidor. Lo único que se descarga, la primera vez, es el modelo (varias decenas de MB).
 3. La prenda se recorta a su tamaño real y se mide el ancho de su cuerpo (el bajo de una camiseta,
    la cintura de un pantalón).
-4. La foto se proyecta de frente sobre la prenda 3D, haciendo coincidir esa medida con la de la
-   malla. Lo que la foto no cubre toma su color medio, y la espalda repite el dibujo del frente.
+4. De la foto se toma un trozo de tela limpio y uniforme, sin costuras ni botones, y se le quita la
+   luz con la que se hizo la foto (pliegues, sombras, brillos). Ese trozo se repite alrededor de la
+   prenda 3D a su tamaño real, como un rollo de tela. Así se ven el color, el tejido y el estampado
+   reales sobre la forma de la prenda del catálogo; lo que se pierde es un dibujo grande en su sitio,
+   como un logo en el pecho.
 
 El código está en [src/recorte.js](src/recorte.js) (pasos 1 a 3) y [src/textura.js](src/textura.js)
 (paso 4); la pantalla, en [src/App.jsx](src/App.jsx).

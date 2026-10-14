@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { formas } from './formas.js';
-import { proyeccion, colorMedio } from './textura.js';
+import { trozoDeTela, quitarLuz, envoltura } from './textura.js';
 import './Cuerpo.css';
 
 // Un archivo por cuerpo base; cada uno trae las formas bajo, alto, delgado y corpulento (modelos/cuerpo.py)
@@ -22,21 +22,34 @@ const extremoY = (posiciones, signo = 1) => {
     return signo * extremo;
 };
 
-/** La foto de la prenda como textura, con lo que no cubre relleno de su color medio. */
-const textura = async (imagen) => {
-    const foto = await createImageBitmap(imagen);
+/**
+ * La tela de la prenda: un trozo limpio y uniforme de su foto, sin la luz de la foto, que se repite en
+ * espejo para que no se noten los cortes entre copias. `proporcion` es su lado dividido por el ancho del
+ * cuerpo de la prenda.
+ */
+const tela = async (prenda) => {
+    const foto = await createImageBitmap(prenda.imagen);
     const lienzo = Object.assign(document.createElement('canvas'), { width: foto.width, height: foto.height });
     const ctx = lienzo.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(foto, 0, 0);
-    const [r, g, b] = colorMedio(ctx.getImageData(0, 0, lienzo.width, lienzo.height).data);
-    ctx.globalCompositeOperation = 'destination-over'; // el relleno va por detrás de la prenda
-    ctx.fillStyle = `rgb(${r} ${g} ${b})`;
-    ctx.fillRect(0, 0, lienzo.width, lienzo.height);
-    foto.close();
-    const mapa = new THREE.CanvasTexture(lienzo);
+    // Un tercio del ancho del cuerpo de la prenda: cabe en casi cualquiera y lleva tejido de sobra.
+    // Una prenda sin zona limpia (muy fina o con agujeros) usa la foto entera.
+    const deseado = (prenda.ancho * foto.width) / 3;
+    const trozo = trozoDeTela(ctx.getImageData(0, 0, foto.width, foto.height).data, foto.width, foto.height, deseado)
+        ?? { x: 0, y: 0, lado: Math.min(foto.width, foto.height) };
+    const muestra = Object.assign(document.createElement('canvas'), { width: trozo.lado, height: trozo.lado });
+    const pincel = muestra.getContext('2d');
+    pincel.drawImage(foto, trozo.x, trozo.y, trozo.lado, trozo.lado, 0, 0, trozo.lado, trozo.lado);
+    const pixeles = pincel.getImageData(0, 0, trozo.lado, trozo.lado);
+    quitarLuz(pixeles.data, trozo.lado);
+    pincel.putImageData(pixeles, 0, 0);
+    const proporcion = trozo.lado / (prenda.ancho * foto.width);
+    foto.close(); // cerrada, su ancho pasa a ser 0
+    const mapa = new THREE.CanvasTexture(muestra);
     mapa.colorSpace = THREE.SRGBColorSpace;
-    mapa.flipY = false; // v = 0 es la parte de arriba de la foto, como calcula proyeccion()
-    return mapa;
+    mapa.wrapS = mapa.wrapT = THREE.MirroredRepeatWrapping;
+    mapa.flipY = false; // v crece hacia abajo, como en la foto: los estampados no salen del revés
+    return { mapa, proporcion };
 };
 
 /**
@@ -181,9 +194,9 @@ export default function Cuerpo({ prendas, alCargar }) {
                 const prenda = prendas[malla.userData.prenda];
                 // Solo se rehace la textura si cambia la prenda de esa malla
                 if (!prenda || malla.userData.foto === prenda) continue;
-                const mapa = await textura(prenda.imagen);
+                const { mapa, proporcion } = await tela(prenda);
                 if (cancelado) { mapa.dispose(); return; }
-                const uv = proyeccion(malla.geometry.attributes.position.array, prenda, prenda.referencia);
+                const uv = envoltura(malla.geometry.attributes.position.array, prenda.referencia, proporcion);
                 malla.geometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
                 malla.material.map?.dispose();
                 malla.material.map = mapa;

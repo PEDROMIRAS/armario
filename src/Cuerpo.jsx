@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { formas, extremoY } from './formas.js';
 import { HUECOS } from './huecos.js';
@@ -63,6 +62,8 @@ export default function Cuerpo({ prendas, alCargar }) {
     const lienzo = useRef(null);
     const escena = useRef(null);
     const pintar = useRef(() => {});
+    // El cuerpo cargado va dentro de este grupo, que es el que se gira
+    const maniqui = useRef(new THREE.Group());
     const [guardadas] = useState(leerMedidas);
     // Sin medidas guardadas se empieza ajustando el maniquí
     const [ajustando, setAjustando] = useState(!guardadas);
@@ -80,8 +81,20 @@ export default function Cuerpo({ prendas, alCargar }) {
         // Pensado para fotos de producto: no cambia el tono de los colores, y la ropa sale de su color
         renderer.toneMapping = THREE.NeutralToneMapping;
         escena.current = new THREE.Scene();
-        const camara = new THREE.PerspectiveCamera(30, 1, 0.1, 20);
-        camara.position.set(0, 1.02, 4.5);
+        // La cámara se queda quieta delante, como un espejo; lo que gira es el maniquí
+        const camara = new THREE.PerspectiveCamera(38, 1, 0.1, 20);
+        camara.position.set(0, 1.15, 3.6);
+        camara.lookAt(0, 0.95, 0);
+        escena.current.add(maniqui.current);
+
+        // La habitación (modelos/habitacion.py): se carga una vez y no cambia con el cuerpo
+        let habitacion, cerrado = false;
+        new GLTFLoader().load(`${import.meta.env.BASE_URL}modelos/habitacion.glb`, (gltf) => {
+            if (cerrado) return;
+            habitacion = gltf.scene;
+            escena.current.add(habitacion);
+            pintar.current();
+        }, undefined, console.error); // sin habitación el maniquí se sigue viendo, sobre el fondo de la página
         // La luz de una habitación por todos lados, que marca los pliegues, y un foco que da volumen
         const generador = new THREE.PMREMGenerator(renderer);
         const entorno = generador.fromScene(new RoomEnvironment(), 0.04).texture;
@@ -103,19 +116,26 @@ export default function Cuerpo({ prendas, alCargar }) {
             new THREE.PlaneGeometry(0.9, 0.9).rotateX(-Math.PI / 2),
             new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(degradado), transparent: true, depthWrite: false })
         );
+        sombra.position.y = 0.011; // justo encima de la alfombra
         escena.current.add(sombra);
-
-        const controles = new OrbitControls(camara, canvas);
-        controles.target.set(0, 1.02, 0);
-        controles.enablePan = false;
-        controles.enableZoom = false;
-        // Solo gira alrededor del cuerpo: verlo desde arriba o desde abajo no aporta nada
-        controles.minPolarAngle = controles.maxPolarAngle = Math.PI / 2;
-        controles.update();
 
         // Se pinta solo cuando algo cambia, no en cada fotograma: ahorra batería en el móvil
         pintar.current = () => renderer.render(escena.current, camara);
-        controles.addEventListener('change', pintar.current);
+
+        // Arrastrar en horizontal gira el maniquí, como al darte la vuelta delante del espejo
+        let x = null;
+        const empezar = (e) => { x = e.clientX; canvas.setPointerCapture(e.pointerId); };
+        const mover = (e) => {
+            if (x === null) return;
+            maniqui.current.rotation.y += (e.clientX - x) * 0.01;
+            x = e.clientX;
+            pintar.current();
+        };
+        const soltar = () => { x = null; };
+        canvas.addEventListener('pointerdown', empezar);
+        canvas.addEventListener('pointermove', mover);
+        canvas.addEventListener('pointerup', soltar);
+        canvas.addEventListener('pointercancel', soltar);
 
         const observador = new ResizeObserver(() => {
             renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
@@ -126,8 +146,17 @@ export default function Cuerpo({ prendas, alCargar }) {
         observador.observe(canvas);
 
         return () => {
+            cerrado = true;
             observador.disconnect();
-            controles.dispose();
+            canvas.removeEventListener('pointerdown', empezar);
+            canvas.removeEventListener('pointermove', mover);
+            canvas.removeEventListener('pointerup', soltar);
+            canvas.removeEventListener('pointercancel', soltar);
+            habitacion?.traverse((objeto) => {
+                if (!objeto.isMesh) return;
+                objeto.geometry.dispose();
+                objeto.material.dispose();
+            });
             entorno.dispose();
             sombra.geometry.dispose();
             sombra.material.map.dispose();
@@ -176,7 +205,7 @@ export default function Cuerpo({ prendas, alCargar }) {
                     tramoMas: extremoY(forma('alto')) * 100,
                     tramoMenos: -extremoY(forma('bajo'), -1) * 100,
                 };
-                escena.current.add(gltf.scene);
+                maniqui.current.add(gltf.scene);
                 setModelo({ grupo: gltf.scene, mallas, ...medidas });
                 setEstado('');
             },
@@ -189,7 +218,7 @@ export default function Cuerpo({ prendas, alCargar }) {
     // Al cambiar de cuerpo, el anterior sale de la escena y suelta su memoria gráfica
     useEffect(() => () => {
         if (!modelo) return;
-        escena.current.remove(modelo.grupo);
+        maniqui.current.remove(modelo.grupo);
         for (const malla of modelo.mallas) {
             malla.geometry.dispose();
             malla.material.map?.dispose();

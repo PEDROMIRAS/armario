@@ -58,7 +58,16 @@ paquetes de recursos libres de MakeHuman
 MAKEHUMAN_ASSETS=/ruta/al/paquete blender -b --python modelos/cuerpo.py
 ```
 
-El maniquí está en [src/Cuerpo.jsx](src/Cuerpo.jsx).
+El maniquí está en [src/Cuerpo.jsx](src/Cuerpo.jsx). Está de pie en una habitación sencilla (suelo
+de madera, una ventana, una alfombra y un armario abierto), `public/modelos/habitacion.glb` (95 KB),
+que genera [modelos/habitacion.py](modelos/habitacion.py) con colores lisos y sin recursos externos:
+
+```bash
+blender -b --python modelos/habitacion.py
+```
+
+La cámara se queda quieta delante; al arrastrar gira el maniquí, como al darte la vuelta delante
+de un espejo.
 
 ## Plan
 

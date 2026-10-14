@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Grafo de graphify (se regenera con /graphify)
+graphify-out

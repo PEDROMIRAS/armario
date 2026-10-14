@@ -31,9 +31,12 @@ Una sola pantalla (`src/App.jsx`):
 
 ## Siguiente
 
-En el sobremesa: [el vestido 3D](docs/planes/2026-10-14-vestido-3d.md) y después más formas de
-prenda (blusa, top, falda). Es lo que más falta: el público son mujeres de 20 a 35 años que no saben
-qué ponerse para una cena o un evento, y casi todo lo que prueban son vestidos.
+En el sobremesa: [el vestido 3D](docs/planes/2026-10-14-vestido-3d.md), en su versión más larga.
+Después, **la tijera** en vez de más mallas: el shader recorta el bajo y la manga, y así salen el
+mini, el midi y el largo de una sola malla. Luego tono de piel y pelo, la habitación fija (armario
+con perchas, unas 15 h como máximo) y la prueba con 3 amigas. Orden y motivos en
+[la idea](docs/ideas/armario-virtual.md). El público son mujeres de 20 a 35 años que no saben qué
+ponerse para una cena o un evento, y casi todo lo que prueban son vestidos.
 
 ## Decisiones que no hay que repetir
 
@@ -43,6 +46,8 @@ qué ponerse para una cena o un evento, y casi todo lo que prueban son vestidos.
   pero lo mejor sigue siendo la foto de la prenda sola.
 - **Silueta 2D: quitada.** Solo 3D, por decisión de Pedro.
 - **Probador con IA generativa: descartado.** Cuesta dinero y saca las fotos del móvil.
+- **Más mallas de prenda (blusa, falda, top…): no.** Lo que no salga de recortar camiseta, pantalón
+  o vestido con la tijera, no se hace. Tampoco pecho, cintura y cadera en el maniquí, por el peso.
 
 ## Documentos
 

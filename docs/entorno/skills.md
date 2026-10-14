@@ -32,6 +32,11 @@ Se usan las de addyosmani para `api-and-interface-design`, `browser-testing-with
 
 Las skills de la cuenta de claude.ai (pdf, docx, skill-creator…) se sincronizan solas.
 
+Las skills del proyecto van en el repositorio, en `.claude/skills/`, y llegan a cada PC con
+`git pull`. Hoy solo hay una: `caveman-compress`, que comprime archivos como `CLAUDE.md` para
+gastar menos tokens. Envía el texto del archivo a Claude. `skills-lock.json` guarda de dónde sale
+cada una (`npx skills add <repo> --skill <nombre> -a claude-code`).
+
 ## Otras notas
 
 - `graphify-out/` está en `.gitignore`. En cada PC se regenera con `/graphify .`.

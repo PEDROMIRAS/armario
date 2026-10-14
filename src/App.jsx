@@ -128,7 +128,6 @@ export default function App() {
                         <input
                             type="file"
                             accept="image/*"
-                            capture="environment"
                             disabled={ocupado}
                             onChange={(e) => { poner(hueco, e.target.files[0]); e.target.value = ''; }}
                         />

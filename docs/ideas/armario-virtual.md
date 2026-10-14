@@ -97,7 +97,10 @@ Hecho el 14 de octubre de 2026:
 
 Siguiente, por orden:
 
-1. El vestido 3D ([plan](../planes/2026-10-14-vestido-3d.md)), en su versión más larga.
+1. ~~El vestido 3D~~ ([plan](../planes/2026-10-14-vestido-3d.md)). Hecho el 14 de octubre de 2026,
+   falta verlo en el navegador. El paquete Dress 01 no trae ningún vestido largo y con manga larga a
+   la vez; se eligió la túnica `wdg_mycenaean_tunic`: recta, por debajo de la rodilla y con manga
+   corta. La tijera podrá acortar el bajo y quitar la manga, pero no alargarlos.
 2. La tijera en el vestido: largo de bajo y largo de manga, con la piel respetando el corte.
 3. Los valores de corte guardados con cada prenda del armario.
 4. Tono de piel y color de pelo.

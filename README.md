@@ -32,7 +32,7 @@ El código está en [src/recorte.js](src/recorte.js) (pasos 1 a 3) y [src/textur
 ## El cuerpo 3D
 
 Los cuerpos, el pelo y la ropa son de [MakeHuman](http://www.makehumancommunity.org/), de licencia
-CC0. Están en `public/modelos/mujer.glb` (2,9 MB) y `hombre.glb` (2,7 MB), y los genera
+CC0. Están en `public/modelos/mujer.glb` (3,3 MB) y `hombre.glb` (2,9 MB), y los genera
 [modelos/cuerpo.py](modelos/cuerpo.py): crea cada cuerpo base con su peinado y un conjunto de ropa,
 le baja los brazos (MakeHuman lo crea con ellos abiertos) y guarda como formas sus cuatro extremos
 (delgado, corpulento, bajo y alto). La app mezcla esas formas según los controles, y el pelo y las
@@ -43,10 +43,14 @@ vienen en dos piezas sueltas: el generador las separa en `camiseta` y `pantalon`
 cuerpo que queda bajo cada prenda va en el archivo como pieza aparte y la app no la pinta mientras
 la prenda está puesta: así el cuerpo no asoma por la tela ceñida.
 
-Para regenerarlos hace falta [Blender](https://www.blender.org/) 5 con la extensión MPFB y el
-paquete de recursos libres de MakeHuman
+El cuerpo de mujer lleva además un vestido: la túnica `wdg_mycenaean_tunic` (de WDG, CC0) del
+paquete Dress 01, recta, por debajo de la rodilla y con manga corta.
+
+Para regenerarlos hace falta [Blender](https://www.blender.org/) 5 con la extensión MPFB y los
+paquetes de recursos libres de MakeHuman
 ([makehuman_system_assets_cc0.zip](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip),
-280 MB) descomprimido:
+280 MB, y [dress01_cc0.zip](https://files.makehumancommunity.org/asset_packs/dress01/dress01_cc0.zip),
+44 MB) descomprimidos en la misma carpeta:
 
 ```bash
 MAKEHUMAN_ASSETS=/ruta/al/paquete blender -b --python modelos/cuerpo.py
@@ -60,7 +64,7 @@ La idea completa, con lo que se va a comprobar y lo que queda fuera, está en
 [docs/ideas/armario-virtual.md](docs/ideas/armario-virtual.md).
 
 1. El armario que se llena solo, sobre el maniquí 3D: hecho, falta probarlo con gente.
-2. Más formas de prenda del catálogo de MakeHuman, empezando por un vestido.
+2. La tijera: recortar el bajo y la manga de cada prenda con controles, en vez de añadir más formas.
 3. ¿Me lo compro?: ver una prenda de una tienda combinada con las que ya tienes.
 
 ## Tecnología

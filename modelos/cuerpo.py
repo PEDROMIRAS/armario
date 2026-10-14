@@ -1,5 +1,6 @@
-# Genera public/modelos/mujer.glb y hombre.glb: el cuerpo base de MakeHuman (CC0) con pelo y un
-# conjunto de dos prendas, y una forma por cada extremo de los controles de la app, para mezclarlas en el navegador.
+# Genera public/modelos/mujer.glb y hombre.glb: el cuerpo base de MakeHuman (CC0) con pelo, un
+# conjunto de dos prendas y, si lo tiene, un vestido, y una forma por cada extremo de los controles
+# de la app, para mezclarlas en el navegador.
 #
 # Hace falta Blender 5.x con la extensión MPFB y el paquete de recursos libres de MakeHuman
 # ("makehuman_system_assets_cc0.zip") descomprimido; su carpeta se pasa en MAKEHUMAN_ASSETS.
@@ -18,9 +19,13 @@ from bl_ext.blender_org.mpfb.services.targetservice import TargetService
 RECURSOS = os.environ["MAKEHUMAN_ASSETS"]
 SALIDA = os.path.join(os.getcwd(), "public", "modelos")
 
-# nombre del archivo -> (valor de "gender" en MakeHuman, peinado, conjunto)
-# El conjunto tiene que venir en dos piezas sueltas, la de arriba y el pantalón
-CUERPOS = {"mujer": (0.0, "long01", "female_casualsuit01"), "hombre": (1.0, "short02", "male_casualsuit04")}
+# nombre del archivo -> (valor de "gender" en MakeHuman, peinado, conjunto, vestido o None)
+# El conjunto tiene que venir en dos piezas sueltas, la de arriba y el pantalón.
+# El vestido es del paquete Dress 01 (CC0); se descomprime en la misma carpeta de recursos.
+CUERPOS = {
+    "mujer": (0.0, "long01", "female_casualsuit01", "wdg_mycenaean_tunic"),
+    "hombre": (1.0, "short02", "male_casualsuit04", None),
+}
 # MakeHuman crea el cuerpo con los brazos abiertos; se bajan este ángulo para una postura de pie natural
 BRAZOS = math.radians(30)
 # La tela ceñida coincide con la piel; separada estos metros, la piel no asoma por el borde de la prenda
@@ -35,15 +40,16 @@ FORMAS = {
 }
 
 
-def crear(genero, peinado, conjunto, cambios):
-    """Cuerpo con el pelo y el conjunto de ropa ya ajustados a él. Devuelve [cuerpo, pelo, ropa] con las formas y la postura aplicadas."""
+def crear(genero, peinado, conjunto, vestido, cambios):
+    """Cuerpo con el pelo y la ropa ya ajustados a él. Devuelve [cuerpo, pelo, ropa] y, si lo hay, el vestido, con las formas y la postura aplicadas."""
     macro = TargetService.get_default_macro_info_dict()
     macro.update({"gender": genero, **cambios})
     cuerpo = HumanService.create_human(macro_detail_dict=macro)
     # El esqueleto solo sirve para poner la postura: no se exporta
     esqueleto = HumanService.add_builtin_rig(cuerpo, "default")
     mallas = [cuerpo]
-    for carpeta, nombre, tipo in (("hair", peinado, "Hair"), ("clothes", conjunto, "Clothes")):
+    recursos = [("hair", peinado, "Hair"), ("clothes", conjunto, "Clothes")] + ([("clothes", vestido, "Clothes")] if vestido else [])
+    for carpeta, nombre, tipo in recursos:
         antes = set(bpy.data.objects)
         HumanService.add_mhclo_asset(
             os.path.join(RECURSOS, carpeta, nombre, nombre + ".mhclo"), cuerpo, asset_type=tipo,
@@ -82,8 +88,9 @@ def crear(genero, peinado, conjunto, cambios):
         malla.parent = None
         malla.matrix_world = lugar
     bpy.data.objects.remove(esqueleto)
-    for vertice in mallas[2].data.vertices:
-        vertice.co += vertice.normal * HOLGURA
+    for prenda in mallas[2:]:
+        for vertice in prenda.data.vertices:
+            vertice.co += vertice.normal * HOLGURA
     bpy.context.view_layer.update()
     return mallas
 
@@ -113,16 +120,20 @@ def material_de_pelo(pelo):
     pelo.data.materials.append(material)
 
 
-for archivo, (genero, peinado, conjunto) in CUERPOS.items():
+for archivo, (genero, peinado, conjunto, nombre_vestido) in CUERPOS.items():
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    mallas = crear(genero, peinado, conjunto, {})
-    cuerpo, pelo, ropa = mallas
+    mallas = crear(genero, peinado, conjunto, nombre_vestido, {})
+    cuerpo, pelo, ropa, *vestido = mallas
     cuerpo.name, pelo.name = "cuerpo", "pelo"
+    for malla in vestido:
+        malla.name = "vestido"
+        assert malla.name == "vestido"  # la app la reconoce por este nombre
+        malla.data.materials.clear()
     for objeto in mallas:
         objeto.shape_key_add(name="Basis")
 
     for nombre, cambios in FORMAS.items():
-        variantes = crear(genero, peinado, conjunto, cambios)
+        variantes = crear(genero, peinado, conjunto, nombre_vestido, cambios)
         for base, variante in zip(mallas, variantes):
             copiar_forma(base, variante, nombre)
         for variante in reversed(variantes):
@@ -150,28 +161,31 @@ for archivo, (genero, peinado, conjunto) in CUERPOS.items():
     pantalon, camiseta = sorted(bpy.context.selected_objects, key=lambda o: max(v.co.z for v in o.data.vertices))
     pantalon.name, camiseta.name = "pantalon", "camiseta"
     assert (pantalon.name, camiseta.name) == ("pantalon", "camiseta")  # la app las reconoce por este nombre
-    prendas = (camiseta, pantalon)
+    prendas = (camiseta, pantalon, *vestido)
     mallas = [cuerpo, pelo, *prendas]
 
-    # El conjunto trae la lista de vértices del cuerpo que tapa. Esas caras van con un material que
-    # dice qué prendas tienen encima (una, o las dos en la cintura), para que salgan como piezas
+    # Cada prenda trae la lista de vértices del cuerpo que tapa. Esas caras van con un material que
+    # dice qué prendas tienen encima (una, o varias en la cintura), para que salgan como piezas
     # aparte y la app esconda las de las prendas puestas: si no, el cuerpo asoma por la tela ceñida.
     # (la otra máscara del cuerpo, "body", es la que esconde la geometría auxiliar)
-    (grupo,) = [m.vertex_group for m in cuerpo.modifiers if m.type == "MASK" and m.vertex_group != "body"]
-    tapado = cuerpo.vertex_groups[grupo].index
+    tapado = {cuerpo.vertex_groups[m.vertex_group].index for m in cuerpo.modifiers if m.type == "MASK" and m.vertex_group != "body"}
+    assert len(tapado) == len(prendas) - 1, tapado  # una máscara por el conjunto y otra por el vestido
     telas = [
         BVHTree.FromPolygons([p.matrix_world @ v.co for v in p.data.vertices], [tuple(c.vertices) for c in p.data.polygons])
         for p in prendas
     ]
     cuerpo.data.materials.clear()
-    # En este orden: el índice de cada material es la suma de 1 por la camiseta y 2 por el pantalón
-    for nombre in ("piel", "bajo_camiseta", "bajo_pantalon", "bajo_camiseta_pantalon"):
+    # El índice de cada material suma 1 por la camiseta, 2 por el pantalón y 4 por el vestido:
+    # "piel", "bajo_camiseta", "bajo_pantalon", "bajo_camiseta_pantalon", "bajo_vestido"…
+    for indice in range(2 ** len(prendas)):
+        encima = [p.name for i, p in enumerate(prendas) if indice >> i & 1]
+        nombre = "_".join(["bajo", *encima]) if encima else "piel"
         material = bpy.data.materials.new(nombre)
         assert material.name == nombre  # la app las reconoce por este nombre
         cuerpo.data.materials.append(material)
     giro = cuerpo.matrix_world.to_3x3()
     for poligono in cuerpo.data.polygons:
-        if any(g.group == tapado for v in poligono.vertices for g in cuerpo.data.vertices[v].groups):
+        if any(g.group in tapado for v in poligono.vertices for g in cuerpo.data.vertices[v].groups):
             hacia_fuera = (giro @ poligono.normal).normalized()
             puntos = [cuerpo.matrix_world @ p for p in (poligono.center, *(cuerpo.data.vertices[v].co for v in poligono.vertices))]
             # Una tela tapa la cara si está delante de toda ella; se mira desde un poco dentro, por si la piel
@@ -179,7 +193,7 @@ for archivo, (genero, peinado, conjunto) in CUERPOS.items():
             # vista: escondida abriría un agujero junto al borde.
             # shortcut: 8 cm de alcance, medido para estos conjuntos; una prenda más holgada no taparía nada
             encima = [all(tela.ray_cast(p - hacia_fuera * 0.02, hacia_fuera, 0.1)[0] is not None for p in puntos) for tela in telas]
-            poligono.material_index = encima[0] + 2 * encima[1]
+            poligono.material_index = sum(tapa << i for i, tapa in enumerate(encima))
     material_de_pelo(pelo)
     for objeto in mallas:
         for modificador in list(objeto.modifiers):

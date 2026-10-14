@@ -12,7 +12,7 @@ const CUERPOS = [
     { id: 'hombre', nombre: 'Hombre' },
 ];
 // Las prendas que trae cada archivo, como mallas con este nombre (modelos/cuerpo.py)
-const PRENDAS = ['camiseta', 'pantalon'];
+const PRENDAS = ['camiseta', 'pantalon', 'vestido'];
 const ALTURA = { min: 145, max: 205 }; // cm: las formas extremas del modelo van mucho más allá de una persona
 
 /** Mayor valor (o menor, con signo -1) de la coordenada Y en una lista de posiciones x, y, z. */
@@ -41,10 +41,13 @@ const textura = async (imagen) => {
 
 /**
  * Maniquí 3D ajustable, vestido con las fotos de las prendas puestas.
- * @param {{prendas: Object<string, {imagen: Blob, ancho: number, centro: number, referencia: number[]}>}} props
- *   La prenda puesta en cada malla del catálogo (camiseta, pantalon); sin prenda, la malla no se pinta.
+ * @param {object} props
+ * @param {Object<string, {imagen: Blob, ancho: number, centro: number, referencia: number[]}>} props.prendas
+ *   La prenda puesta en cada malla del catálogo (camiseta, pantalon, vestido); sin prenda, no se pinta.
+ * @param {(mallas: string[]) => void} props.alCargar - Recibe las mallas de prenda que trae el cuerpo cargado:
+ *   no todos los modelos traen todas.
  */
-export default function Cuerpo({ prendas }) {
+export default function Cuerpo({ prendas, alCargar }) {
     const lienzo = useRef(null);
     const escena = useRef(null);
     const pintar = useRef(() => {});
@@ -153,6 +156,10 @@ export default function Cuerpo({ prendas }) {
             malla.material.dispose();
         }
     }, [modelo]);
+
+    useEffect(() => {
+        if (modelo) alCargar(modelo.mallas.map((m) => m.userData.prenda).filter(Boolean));
+    }, [modelo, alCargar]);
 
     const alturaActual = altura ?? modelo?.base ?? 166;
 

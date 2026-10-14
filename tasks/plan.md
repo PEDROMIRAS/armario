@@ -1,5 +1,9 @@
 # Plan: prendas 3D que siguen al cuerpo
 
+> **14 de octubre de 2026, tarde:** las tareas 2 y 3 se hicieron de otra forma. La app es ahora solo
+> 3D y las prendas se ponen desde el armario con la foto como tela (`src/textura.js`), no con botones
+> de color fijo. **Siguiente tarea para este PC: [el vestido 3D](../docs/planes/2026-10-14-vestido-3d.md).**
+
 ## Resumen
 
 El siguiente paso es vestir el maniquí 3D con una camiseta y un pantalón de MakeHuman que se

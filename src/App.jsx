@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { quitarFondo } from './recorte.js';
-import { HUECOS } from './huecos.js';
+import { HUECOS, vestir } from './huecos.js';
 import * as almacen from './almacen.js';
 import './App.css';
 
@@ -28,6 +28,9 @@ export default function App() {
     const [ocasion, setOcasion] = useState('');
     const [estado, setEstado] = useState('');
     const [ocupado, setOcupado] = useState(false);
+    // Las mallas de prenda que trae el cuerpo cargado: un hueco sin su malla no se ofrece
+    const [mallas, setMallas] = useState([]);
+    const huecos = HUECOS.filter((hueco) => mallas.includes(hueco.malla));
 
     useEffect(() => {
         let cancelado = false;
@@ -53,7 +56,7 @@ export default function App() {
             const prenda = { hueco: hueco.id, ...(await quitarFondo(foto, setEstado, hueco.referencia)) };
             const id = await guardarEn(almacen.prendas, prenda);
             setArmario((antes) => [...antes, conUrl({ ...prenda, id })]);
-            setPuestas((antes) => ({ ...antes, [hueco.id]: id }));
+            setPuestas((antes) => vestir(antes, hueco, id));
             setEstado('');
         } catch (error) {
             // El error del navegador es técnico y en inglés: va a la consola, y en pantalla solo qué hacer
@@ -65,7 +68,7 @@ export default function App() {
 
     // Tocar una prenda guardada te la pone; si ya la llevas, te la quita
     const alternar = (hueco, prenda) => setPuestas((antes) => {
-        if (antes[hueco.id] !== prenda.id) return { ...antes, [hueco.id]: prenda.id };
+        if (antes[hueco.id] !== prenda.id) return vestir(antes, hueco, prenda.id);
         const { [hueco.id]: _, ...resto } = antes;
         return resto;
     });
@@ -99,9 +102,9 @@ export default function App() {
 
     // Lo que lleva puesto el maniquí, por malla del catálogo, con la franja donde se midió cada foto
     const vestido = useMemo(() => Object.fromEntries(HUECOS.flatMap(({ id, malla, referencia }) => {
-        const prenda = armario.find((p) => p.id === puestas[id]);
+        const prenda = mallas.includes(malla) && armario.find((p) => p.id === puestas[id]);
         return prenda ? [[malla, { ...prenda, referencia }]] : [];
-    })), [armario, puestas]);
+    })), [armario, puestas, mallas]);
     const llevasAlgo = Object.keys(vestido).length > 0;
 
     return (
@@ -113,13 +116,13 @@ export default function App() {
             </p>
 
             <Suspense fallback={<p className="estado">Cargando el maniquí…</p>}>
-                <Cuerpo prendas={vestido} />
+                <Cuerpo prendas={vestido} alCargar={setMallas} />
             </Suspense>
 
             <p role="status" className="estado">{estado}</p>
 
             <div className="botones">
-                {HUECOS.map((hueco) => (
+                {huecos.map((hueco) => (
                     <label key={hueco.id} className={ocupado ? 'boton inactivo' : 'boton'}>
                         {hueco.nombre}
                         <input
@@ -159,10 +162,10 @@ export default function App() {
                 </section>
             )}
 
-            {armario.length > 0 && (
+            {armario.some((p) => huecos.some((h) => h.id === p.hueco)) && (
                 <section className="armario" aria-label="Tu armario">
                     <h2>Tu armario</h2>
-                    {HUECOS.map((hueco) => {
+                    {huecos.map((hueco) => {
                         const guardadas = armario.filter((p) => p.hueco === hueco.id);
                         if (guardadas.length === 0) return null;
                         return (

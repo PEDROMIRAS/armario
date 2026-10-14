@@ -42,8 +42,10 @@ sus costes.
   comprobado el 14 de octubre de 2026, las seis tiendas probadas bloquean la lectura desde un
   servidor ([prueba](../pruebas/2026-10-14-enlaces-de-tienda.md)). El enlace se sustituye por una
   captura de pantalla de la tienda o, en Android, por compartir la imagen desde su app.
-- [ ] **Una captura de la tienda da una prenda usable en el maniquí.** Con 5 capturas reales de Zara
-  y Shein (con modelo, sin modelo y en «flat lay») pasadas por el recorte actual.
+- [x] **Una imagen de tienda da una prenda usable en el maniquí.** Solo si es la foto de la prenda
+  sola. Comprobado el 14 de octubre de 2026 con 5 imágenes de Zara: con modelo, el recorte deja a la
+  persona entera ([prueba](../pruebas/2026-10-14-enlaces-de-tienda.md)). La app debe pedir la foto
+  de la prenda sola y añadir un hueco «vestido».
 - [ ] **El problema se repite y lo resuelven con lo que tienen.** Seis entrevistas, al menos tres con
   mujeres que no sean amigas cercanas, preguntando por la última vez (no por opiniones): qué
   hicieron, si han probado apps de armario y por qué las dejaron, y qué parte de lo que se pusieron

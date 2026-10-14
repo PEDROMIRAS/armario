@@ -35,3 +35,22 @@ compartir en redes (`og:image`).
 ## Siguiente paso
 Probar a mano la alternativa 1 con 5 capturas reales de Zara y Shein, y ver qué deja el recorte
 actual: con modelo, sin modelo y en «flat lay» (la prenda extendida sobre una superficie).
+
+## Segunda parte: ¿sirven las imágenes de tienda? (mismo día)
+Se pasaron 5 imágenes de producto de Zara por el mismo modelo que usa la app para quitar el fondo
+(`@imgly/background-removal`, en su versión para Node):
+
+| Imagen | Qué queda | ¿Sirve? |
+|---|---|---|
+| Vestido granate, modelo en una escalera, cortado por abajo | La modelo entera con el vestido | No |
+| Vestido azul, modelo de cuerpo entero sobre pared blanca | La modelo entera con el vestido | No |
+| Vestido negro, modelo en la playa | La modelo entera con el vestido | No |
+| El mismo vestido negro, solo la prenda sobre fondo blanco | Solo el vestido, limpio | **Sí** |
+| Top beige, modelo cortada por la cintura, con vaqueros | La modelo con el top y los vaqueros | No |
+
+**Conclusión:** el modelo quita el fondo, no a la persona. Solo vale la foto de la prenda sola, la
+que en Zara suele ser la última de la galería. Las fotos con modelo necesitarían otro modelo de IA
+que separe la ropa del cuerpo, y además suelen venir cortadas o con otras prendas.
+
+Otro hallazgo: 4 de las 5 son vestidos, y la app solo tiene los huecos «arriba» y «abajo». Para
+ropa de evento hace falta un hueco «vestido» que ocupe los dos.

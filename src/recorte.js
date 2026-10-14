@@ -22,13 +22,13 @@ export function caja(pixeles, ancho, alto, umbral = 16) {
 }
 
 /**
- * Ancho y centro de la prenda en una franja horizontal de su caja, como fracciones del ancho de la caja.
+ * Ancho de la prenda en una franja horizontal de su caja, como fracción del ancho de la caja.
  * Sirve para medir el cuerpo de la prenda sin contar mangas o perneras abiertas: el bajo de una
  * camiseta o la cintura de un pantalón.
  * @param {number} desde - Inicio de la franja, de 0 (arriba) a 1 (abajo).
  */
 export function franja(pixeles, ancho, c, desde, hasta, umbral = 16) {
-    const anchos = [], centros = [];
+    const anchos = [];
     for (let y = c.y + Math.floor(c.alto * desde); y < c.y + Math.ceil(c.alto * hasta); y++) {
         let x0 = -1, x1 = -1;
         for (let x = c.x; x < c.x + c.ancho; x++) {
@@ -38,12 +38,10 @@ export function franja(pixeles, ancho, c, desde, hasta, umbral = 16) {
         }
         if (x0 < 0) continue;
         anchos.push(x1 - x0 + 1);
-        centros.push((x0 + x1 + 1) / 2 - c.x);
     }
-    if (anchos.length === 0) return { ancho: 1, centro: 0.5 };
+    if (anchos.length === 0) return { ancho: 1 };
     // La mediana: una fila rara (una etiqueta, un pliegue) no cambia la medida
-    const mediana = (lista) => lista.sort((a, b) => a - b)[lista.length >> 1];
-    return { ancho: mediana(anchos) / c.ancho, centro: mediana(centros) / c.ancho };
+    return { ancho: anchos.sort((a, b) => a - b)[anchos.length >> 1] / c.ancho };
 }
 
 const lienzo = (ancho, alto) => Object.assign(document.createElement('canvas'), { width: ancho, height: alto });
@@ -53,8 +51,8 @@ const aBlob = (canvas, tipo) => new Promise((listo) => canvas.toBlob(listo, tipo
  * @param {Blob} foto - Imagen elegida o hecha con la cámara.
  * @param {Function} alAvanzar - Recibe un texto con el paso en curso.
  * @param {number[]} referencia - Franja [desde, hasta] donde se mide el cuerpo de la prenda.
- * @returns {Promise<{imagen: Blob, ancho: number, centro: number}>} El PNG recortado, y el ancho y
- *   el centro del cuerpo de la prenda como fracciones del ancho de la imagen.
+ * @returns {Promise<{imagen: Blob, ancho: number}>} El PNG recortado, y el ancho del cuerpo de la
+ *   prenda como fracción del ancho de la imagen.
  */
 export async function quitarFondo(foto, alAvanzar, referencia) {
     const original = await createImageBitmap(foto);

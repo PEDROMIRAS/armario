@@ -29,6 +29,6 @@ test('la franja mide el cuerpo de la prenda, no las mangas', () => {
     for (let y = 0; y < 2; y++) for (let x = 0; x < 10; x++) pintar(x, y);
     for (let y = 2; y < 6; y++) for (let x = 2; x < 6; x++) pintar(x, y);
     const c = caja(pixeles, ancho, alto);
-    assert.deepEqual(franja(pixeles, ancho, c, 0.5, 1), { ancho: 0.4, centro: 0.4 });
-    assert.deepEqual(franja(pixeles, ancho, c, 0, 0.3), { ancho: 1, centro: 0.5 });
+    assert.deepEqual(franja(pixeles, ancho, c, 0.5, 1), { ancho: 0.4 });
+    assert.deepEqual(franja(pixeles, ancho, c, 0, 0.3), { ancho: 1 });
 });

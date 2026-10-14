@@ -14,3 +14,13 @@ export function formas(altura, complexion, modelo) {
         corpulento: Math.max(0, complexion),
     };
 }
+
+/**
+ * Mayor valor (o menor, con signo -1) de la coordenada Y en las posiciones de una malla de three.js.
+ * @param {{array: ArrayLike<number>, count: number}} posiciones - x, y, z de cada vértice, seguidos.
+ */
+export function extremoY(posiciones, signo = 1) {
+    let extremo = -Infinity;
+    for (let i = 1; i < posiciones.count * 3; i += 3) extremo = Math.max(extremo, signo * posiciones.array[i]);
+    return signo * extremo;
+}

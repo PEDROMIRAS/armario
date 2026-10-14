@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { formas } from './formas.js';
+import { formas, extremoY } from './formas.js';
+import { HUECOS } from './huecos.js';
 import { trozoDeTela, quitarLuz, envoltura } from './textura.js';
 import './Cuerpo.css';
 
@@ -12,15 +13,8 @@ const CUERPOS = [
     { id: 'hombre', nombre: 'Hombre' },
 ];
 // Las prendas que trae cada archivo, como mallas con este nombre (modelos/cuerpo.py)
-const PRENDAS = ['camiseta', 'pantalon', 'vestido'];
+const PRENDAS = HUECOS.map((hueco) => hueco.malla);
 const ALTURA = { min: 145, max: 205 }; // cm: las formas extremas del modelo van mucho más allá de una persona
-
-/** Mayor valor (o menor, con signo -1) de la coordenada Y en una lista de posiciones x, y, z. */
-const extremoY = (posiciones, signo = 1) => {
-    let extremo = -Infinity;
-    for (let i = 1; i < posiciones.count * 3; i += 3) extremo = Math.max(extremo, signo * posiciones.array[i]);
-    return signo * extremo;
-};
 
 /**
  * La tela de la prenda: un trozo limpio y uniforme de su foto, sin la luz de la foto, que se repite en
@@ -55,7 +49,7 @@ const tela = async (prenda) => {
 /**
  * Maniquí 3D ajustable, vestido con las fotos de las prendas puestas.
  * @param {object} props
- * @param {Object<string, {imagen: Blob, ancho: number, centro: number, referencia: number[]}>} props.prendas
+ * @param {Object<string, {id: number|string, imagen: Blob, ancho: number, referencia: number[]}>} props.prendas
  *   La prenda puesta en cada malla del catálogo (camiseta, pantalon, vestido); sin prenda, no se pinta.
  * @param {(mallas: string[]) => void} props.alCargar - Recibe las mallas de prenda que trae el cuerpo cargado:
  *   no todos los modelos traen todas.
@@ -154,7 +148,7 @@ export default function Cuerpo({ prendas, alCargar }) {
                 setEstado('');
             },
             undefined,
-            () => setEstado('No se ha podido cargar el cuerpo.')
+            () => { if (!cancelado) setEstado('No se ha podido cargar el cuerpo.'); }
         );
         return () => { cancelado = true; };
     }, [sexo]);
@@ -192,8 +186,8 @@ export default function Cuerpo({ prendas, alCargar }) {
         (async () => {
             for (const malla of modelo.mallas) {
                 const prenda = prendas[malla.userData.prenda];
-                // Solo se rehace la textura si cambia la prenda de esa malla
-                if (!prenda || malla.userData.foto === prenda) continue;
+                // Solo se rehace la textura si cambia la prenda de esa malla (el objeto se crea de nuevo en cada cambio: vale el id)
+                if (!prenda || malla.userData.foto === prenda.id) continue;
                 const { mapa, proporcion } = await tela(prenda);
                 if (cancelado) { mapa.dispose(); return; }
                 const uv = envoltura(malla.geometry.attributes.position.array, prenda.referencia, proporcion);
@@ -201,7 +195,7 @@ export default function Cuerpo({ prendas, alCargar }) {
                 malla.material.map?.dispose();
                 malla.material.map = mapa;
                 malla.material.needsUpdate = true;
-                malla.userData.foto = prenda;
+                malla.userData.foto = prenda.id;
             }
             for (const malla of modelo.mallas) {
                 if (malla.userData.prenda) malla.visible = Boolean(prendas[malla.userData.prenda]);

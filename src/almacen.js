@@ -15,7 +15,11 @@ const abrir = () => {
                 if (!peticion.result.objectStoreNames.contains(nombre)) peticion.result.createObjectStore(nombre, { keyPath: 'id', autoIncrement: true });
             }
         };
-        peticion.onsuccess = () => listo(peticion.result);
+        peticion.onsuccess = () => {
+            // Si otra pestaña con una versión nueva necesita la base, se suelta: si no, esa pestaña se queda esperando
+            peticion.result.onversionchange = () => peticion.result.close();
+            listo(peticion.result);
+        };
         peticion.onerror = () => fallo(peticion.error);
     });
 };
@@ -27,7 +31,8 @@ const almacen = (nombre) => {
             const transaccion = db.transaction(nombre, modo);
             const peticion = accion(transaccion.objectStore(nombre));
             transaccion.oncomplete = () => listo(peticion.result);
-            transaccion.onerror = () => fallo(transaccion.error);
+            // Sin espacio, el navegador cancela la transacción sin evento de error
+            transaccion.onerror = transaccion.onabort = () => fallo(transaccion.error);
         });
     };
     return {
@@ -38,7 +43,7 @@ const almacen = (nombre) => {
     };
 };
 
-/** Elementos: {id, hueco, imagen: Blob, ancho, centro} */
+/** Elementos: {id, hueco, imagen: Blob, ancho} (las más antiguas traen también un `centro` que ya no se usa) */
 export const prendas = almacen('prendas');
 /** Elementos: {id, nombre, puestas: {hueco: id de prenda}} */
 export const conjuntos = almacen('conjuntos');

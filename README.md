@@ -32,9 +32,9 @@ El código está en [src/recorte.js](src/recorte.js) (pasos 1 a 3) y [src/textur
 ## El cuerpo 3D
 
 Los cuerpos, el pelo y la ropa son de [MakeHuman](http://www.makehumancommunity.org/), de licencia
-CC0. Están en `public/modelos/mujer.glb` (3,7 MB) y `hombre.glb` (3,1 MB), y los genera
-[modelos/cuerpo.py](modelos/cuerpo.py): crea cada cuerpo base con su piel, ojos, cejas, pestañas, peinado y un conjunto de ropa,
-le baja los brazos (MakeHuman lo crea con ellos abiertos) y guarda como formas sus cuatro extremos
+CC0. Están en `public/modelos/mujer.glb` (4,1 MB) y `hombre.glb` (3,0 MB), y los genera
+[modelos/cuerpo.py](modelos/cuerpo.py): crea cada cuerpo base con su piel, ojos, cejas, pestañas, peinado, zapatos y un conjunto de ropa,
+le baja los brazos y relaja las manos (MakeHuman lo crea con los brazos abiertos) y guarda como formas sus cuatro extremos
 (delgado, corpulento, bajo y alto). La app mezcla esas formas según los controles, y el pelo y las
 prendas llevan las mismas para seguir al cuerpo.
 
@@ -44,13 +44,15 @@ cuerpo que queda bajo cada prenda va en el archivo como pieza aparte y la app no
 la prenda está puesta: así el cuerpo no asoma por la tela ceñida.
 
 El cuerpo de mujer lleva además un vestido: `toigo_halter_dress_midi` (de Margaret Toigo, CC0) del
-paquete Dress 01, entallado, con cuello halter y hasta media pierna.
+paquete Dress 01, entallado, con cuello halter y hasta media pierna, y unas bailarinas negras,
+`toigo_ballet_flats` (CC0), del paquete Shoes 01.
 
 Para regenerarlos hace falta [Blender](https://www.blender.org/) 5 con la extensión MPFB y los
 paquetes de recursos libres de MakeHuman
 ([makehuman_system_assets_cc0.zip](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip),
-280 MB, y [dress01_cc0.zip](https://files.makehumancommunity.org/asset_packs/dress01/dress01_cc0.zip),
-44 MB) descomprimidos en la misma carpeta:
+280 MB; [dress01_cc0.zip](https://files.makehumancommunity.org/asset_packs/dress01/dress01_cc0.zip),
+44 MB; y [shoes01_cc0.zip](https://files.makehumancommunity.org/asset_packs/shoes01/shoes01_cc0.zip),
+79 MB) descomprimidos en la misma carpeta:
 
 ```bash
 MAKEHUMAN_ASSETS=/ruta/al/paquete blender -b --python modelos/cuerpo.py

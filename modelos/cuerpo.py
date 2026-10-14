@@ -11,7 +11,7 @@ import os
 
 import bmesh
 import bpy
-from mathutils import Matrix
+from mathutils import Matrix, Quaternion
 from mathutils.bvhtree import BVHTree
 from bl_ext.blender_org.mpfb.services.humanservice import HumanService
 from bl_ext.blender_org.mpfb.services.targetservice import TargetService
@@ -19,12 +19,13 @@ from bl_ext.blender_org.mpfb.services.targetservice import TargetService
 RECURSOS = os.environ["MAKEHUMAN_ASSETS"]
 SALIDA = os.path.join(os.getcwd(), "public", "modelos")
 
-# nombre del archivo -> (valor de "gender" en MakeHuman, piel, peinado, conjunto, vestido o None)
+# nombre del archivo -> (valor de "gender" en MakeHuman, piel, peinado, zapatos, conjunto, vestido o None)
 # El conjunto tiene que venir en dos piezas sueltas, la de arriba y el pantalón.
-# El vestido es del paquete Dress 01 (CC0); se descomprime en la misma carpeta de recursos.
+# El vestido es del paquete Dress 01 y las bailarinas, del Shoes 01 (los dos CC0); se descomprimen en
+# la misma carpeta de recursos.
 CUERPOS = {
-    "mujer": (0.0, "young_caucasian_female", "long01", "female_casualsuit01", "toigo_halter_dress_midi"),
-    "hombre": (1.0, "young_caucasian_male", "short02", "male_casualsuit04", None),
+    "mujer": (0.0, "young_caucasian_female", "long01", "toigo_ballet_flats", "female_casualsuit01", "toigo_halter_dress_midi"),
+    "hombre": (1.0, "young_caucasian_male", "short02", "shoes04", "male_casualsuit04", None),
 }
 # Las piezas de la cara: (carpeta, nombre, tipo en MPFB, textura). Sin ellas la cara es de muñeco.
 CARA = [
@@ -34,8 +35,13 @@ CARA = [
 ]
 # La textura de piel viene a 2048 px; a la mitad pesa un cuarto y en un móvil no se nota
 LADO_PIEL = 1024
+# Los zapatos ocupan unos pocos píxeles en pantalla
+LADO_ZAPATOS = 256
 # MakeHuman crea el cuerpo con los brazos abiertos; se bajan este ángulo para una postura de pie natural
 BRAZOS = math.radians(30)
+# Y estira el codo (MakeHuman lo deja doblado hacia delante) y dobla un poco los dedos: la mano en reposo
+CODO = math.radians(-25)
+DEDOS = math.radians(20)
 # La tela ceñida coincide con la piel; separada estos metros, la piel no asoma por el borde de la prenda
 HOLGURA = 0.004
 
@@ -48,15 +54,19 @@ FORMAS = {
 }
 
 
-def crear(genero, peinado, conjunto, vestido, cambios):
-    """Cuerpo con el pelo, la cara y la ropa ya ajustados a él. Devuelve [cuerpo, pelo, *cara, ropa] y, si lo hay, el vestido, con las formas y la postura aplicadas."""
+# Dónde empieza la ropa en lo que devuelve crear(): antes van el cuerpo, el pelo, la cara y los zapatos
+ROPA = 3 + len(CARA)
+
+
+def crear(genero, peinado, zapatos, conjunto, vestido, cambios):
+    """Cuerpo con el pelo, la cara, los zapatos y la ropa ya ajustados a él. Devuelve [cuerpo, pelo, *cara, zapatos, ropa] y, si lo hay, el vestido, con las formas y la postura aplicadas."""
     macro = TargetService.get_default_macro_info_dict()
     macro.update({"gender": genero, **cambios})
     cuerpo = HumanService.create_human(macro_detail_dict=macro)
     # El esqueleto solo sirve para poner la postura: no se exporta
     esqueleto = HumanService.add_builtin_rig(cuerpo, "default")
     mallas = [cuerpo]
-    recursos = [("hair", peinado, "Hair"), *(pieza[:3] for pieza in CARA), ("clothes", conjunto, "Clothes")]
+    recursos = [("hair", peinado, "Hair"), *(pieza[:3] for pieza in CARA), ("clothes", zapatos, "Clothes"), ("clothes", conjunto, "Clothes")]
     recursos += [("clothes", vestido, "Clothes")] if vestido else []
     for carpeta, nombre, tipo in recursos:
         antes = set(bpy.data.objects)
@@ -73,6 +83,13 @@ def crear(genero, peinado, conjunto, vestido, cambios):
         # Gira el brazo hacia abajo alrededor del hombro, en el plano del frente
         hombro = Matrix.Translation(hueso.head)
         hueso.matrix = hombro @ Matrix.Rotation(signo * BRAZOS, 4, "Y") @ hombro.inverted() @ hueso.matrix
+        bpy.context.view_layer.update()
+        # El pulgar se dobla la mitad que los demás dedos
+        giros = [("lowerarm01", CODO)] + [(f"finger{d}-{f}", DEDOS / 2 if d == 1 else DEDOS) for d in range(1, 6) for f in (1, 2, 3)]
+        for nombre, angulo in giros:
+            hueso = esqueleto.pose.bones[f"{nombre}.{lado}"]
+            hueso.rotation_mode = "QUATERNION"
+            hueso.rotation_quaternion = Quaternion((1, 0, 0), angulo)
     bpy.context.view_layer.update()
     for malla in mallas:
         lugar = malla.matrix_world.copy()
@@ -97,7 +114,7 @@ def crear(genero, peinado, conjunto, vestido, cambios):
         malla.parent = None
         malla.matrix_world = lugar
     bpy.data.objects.remove(esqueleto)
-    for prenda in mallas[2 + len(CARA):]:
+    for prenda in mallas[ROPA:]:
         for vertice in prenda.data.vertices:
             vertice.co += vertice.normal * HOLGURA
     bpy.context.view_layer.update()
@@ -128,20 +145,30 @@ def material_simple(nombre, imagen, transparente=True):
     return material
 
 
+def textura(carpeta, lado):
+    """La imagen de color del material de MakeHuman (.mhmat) que hay en la carpeta de un recurso, reducida a `lado` px."""
+    (mhmat,) = [nombre for nombre in os.listdir(carpeta) if nombre.endswith(".mhmat")]
+    (archivo,) = [linea.split()[1] for linea in open(os.path.join(carpeta, mhmat), encoding="utf-8") if linea.startswith("diffuseTexture ")]
+    imagen = bpy.data.images.load(os.path.join(carpeta, archivo))
+    imagen.scale(lado, lado)
+    return imagen
+
+
 def poner_material(malla, material):
     malla.data.materials.clear()
     malla.data.materials.append(material)
 
 
-for archivo, (genero, piel, peinado, conjunto, nombre_vestido) in CUERPOS.items():
+for archivo, (genero, piel, peinado, zapatos, conjunto, nombre_vestido) in CUERPOS.items():
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    mallas = crear(genero, peinado, conjunto, nombre_vestido, {})
-    cuerpo, pelo, *cara = mallas[:2 + len(CARA)]
-    ropa, *vestido = mallas[2 + len(CARA):]
-    cuerpo.name, pelo.name = "cuerpo", "pelo"
-    for malla, (_, nombre, _, textura) in zip(cara, CARA):
+    mallas = crear(genero, peinado, zapatos, conjunto, nombre_vestido, {})
+    cuerpo, pelo, *cara, calzado = mallas[:ROPA]
+    ropa, *vestido = mallas[ROPA:]
+    cuerpo.name, pelo.name, calzado.name = "cuerpo", "pelo", "zapatos"
+    poner_material(calzado, material_simple("zapatos", textura(os.path.join(RECURSOS, "clothes", zapatos), LADO_ZAPATOS), transparente=False))
+    for malla, (_, nombre, _, ruta) in zip(cara, CARA):
         malla.name = nombre
-        poner_material(malla, material_simple(nombre, bpy.data.images.load(os.path.join(RECURSOS, textura))))
+        poner_material(malla, material_simple(nombre, bpy.data.images.load(os.path.join(RECURSOS, ruta))))
     for malla in vestido:
         malla.name = "vestido"
         assert malla.name == "vestido"  # la app la reconoce por este nombre
@@ -150,18 +177,21 @@ for archivo, (genero, piel, peinado, conjunto, nombre_vestido) in CUERPOS.items(
         objeto.shape_key_add(name="Basis")
 
     for nombre, cambios in FORMAS.items():
-        variantes = crear(genero, peinado, conjunto, nombre_vestido, cambios)
+        variantes = crear(genero, peinado, zapatos, conjunto, nombre_vestido, cambios)
         for base, variante in zip(mallas, variantes):
             copiar_forma(base, variante, nombre)
         for variante in reversed(variantes):
             bpy.data.objects.remove(variante)
 
-    # La malla trae geometría auxiliar (guías para la ropa y las articulaciones) que no es cuerpo
+    # La malla trae geometría auxiliar (guías para la ropa y las articulaciones) que no es cuerpo. Los
+    # pies dentro de los zapatos también sobran: los zapatos van siempre puestos.
     indice_cuerpo = cuerpo.vertex_groups["body"].index
+    mascara_zapatos = "Delete." + zapatos
+    indice_pies = cuerpo.vertex_groups[mascara_zapatos].index
     malla = bmesh.new()
     malla.from_mesh(cuerpo.data)
     capa = malla.verts.layers.deform.verify()
-    bmesh.ops.delete(malla, geom=[v for v in malla.verts if indice_cuerpo not in v[capa]], context="VERTS")
+    bmesh.ops.delete(malla, geom=[v for v in malla.verts if indice_cuerpo not in v[capa] or indice_pies in v[capa]], context="VERTS")
     malla.to_mesh(cuerpo.data)
     malla.free()
 
@@ -179,26 +209,20 @@ for archivo, (genero, piel, peinado, conjunto, nombre_vestido) in CUERPOS.items(
     pantalon.name, camiseta.name = "pantalon", "camiseta"
     assert (pantalon.name, camiseta.name) == ("pantalon", "camiseta")  # la app las reconoce por este nombre
     prendas = (camiseta, pantalon, *vestido)
-    mallas = [cuerpo, pelo, *cara, *prendas]
+    mallas = [cuerpo, pelo, *cara, calzado, *prendas]
 
     # Cada prenda trae la lista de vértices del cuerpo que tapa. Esas caras van con un material que
     # dice qué prendas tienen encima (una, o varias en la cintura), para que salgan como piezas
     # aparte y la app esconda las de las prendas puestas: si no, el cuerpo asoma por la tela ceñida.
     # (la otra máscara del cuerpo, "body", es la que esconde la geometría auxiliar)
-    tapado = {cuerpo.vertex_groups[m.vertex_group].index for m in cuerpo.modifiers if m.type == "MASK" and m.vertex_group != "body"}
+    tapado = {cuerpo.vertex_groups[m.vertex_group].index for m in cuerpo.modifiers if m.type == "MASK" and m.vertex_group not in ("body", mascara_zapatos)}
     assert len(tapado) == len(prendas) - 1, tapado  # una máscara por el conjunto y otra por el vestido
     telas = [
         BVHTree.FromPolygons([p.matrix_world @ v.co for v in p.data.vertices], [tuple(c.vertices) for c in p.data.polygons])
         for p in prendas
     ]
     cuerpo.data.materials.clear()
-    (textura_piel,) = [
-        os.path.join(RECURSOS, "skins", piel, linea.split()[1])
-        for linea in open(os.path.join(RECURSOS, "skins", piel, piel + ".mhmat"), encoding="utf-8")
-        if linea.startswith("diffuseTexture ")
-    ]
-    imagen_piel = bpy.data.images.load(textura_piel)
-    imagen_piel.scale(LADO_PIEL, LADO_PIEL)
+    imagen_piel = textura(os.path.join(RECURSOS, "skins", piel), LADO_PIEL)
     # El índice de cada material suma 1 por la camiseta, 2 por el pantalón y 4 por el vestido:
     # "piel", "bajo_camiseta", "bajo_pantalon", "bajo_camiseta_pantalon", "bajo_vestido"…
     for indice in range(2 ** len(prendas)):

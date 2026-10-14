@@ -1,75 +1,104 @@
 # Armario virtual
 
-Resumen de la idea tras afinarla el 14 de octubre de 2026. Describe qué se quiere construir, qué
-hay que comprobar antes y qué queda fuera a propósito.
+Resumen de la idea, afinada de nuevo el 14 de octubre de 2026 tras evaluarla
+([evaluación](../ventures/evaluations/2026-10-14-armario-virtual-eval.md)). Describe qué se quiere
+construir, qué hay que comprobar antes y qué queda fuera a propósito.
 
 ## Problema
 
-¿Cómo podríamos hacer que cualquier persona registre su ropa en minutos y vea cómo queda conjuntada
-sobre un cuerpo parecido al suyo, sin sacarla del armario?
+¿Cómo podríamos hacer que una mujer de 20 a 35 años con mucha ropa monte en segundos un conjunto
+para una cena, una fiesta o un evento, viéndolo sobre un cuerpo como el suyo, sin tener que
+fotografiar antes todo su armario?
+
+Hoy se prueba cinco conjuntos delante del espejo y deja la cama llena de ropa, manda fotos a una
+amiga por WhatsApp, busca ideas en Pinterest o Instagram, usa apps como Whering, Cladwell o Indyx, o
+acaba comprando algo nuevo. Esas apps exigen meter el armario entero antes de servir para algo, y
+ese esfuerzo es lo que hace que se abandonen.
 
 ## Dirección elegida
 
-Un cuerpo 3D que cada persona ajusta con pocos controles, y un catálogo pequeño de prendas 3D que se
-adaptan a ese cuerpo y toman el color y el tejido de las fotos del usuario. El cuerpo va dentro de
-la app, construido sobre un modelo de licencia libre (MakeHuman, CC0), para no depender de ningún
-servicio ajeno: el más conocido, Ready Player Me, cerró en enero de 2026.
+**Primero, «el armario que se llena solo»; después, «¿me lo compro?».**
 
-El armario se guarda en el propio dispositivo, sin cuentas. Así cada persona puede usarla desde el
-primer día sin servidor, sin costes y sin que nadie custodie fotos de otros.
+Las prendas no se catalogan por adelantado: se meten solo cuando vas a usarlas, por foto o pegando
+el enlace de la tienda (o compartiéndolo desde la app de la tienda). Cada conjunto que eliges se
+guarda como lo que te pusiste en tal ocasión. Así el armario se va llenando con el uso, y la
+siguiente vez partes de conjuntos reales y no de prendas sueltas.
 
-Lo que hará que apetezca usarla es la velocidad de carga: una foto, un toque para decir qué prenda
-es, y ya está en el armario.
+La segunda fase usa ese armario. Pegas el enlace de algo que estás pensando comprar y lo ves
+combinado con lo que ya tienes. Va después porque sin armario guardado no hay con qué combinar; y
+abre una forma de cubrir costes: Shein tiene programa de afiliados. Inditex, hasta donde sabemos,
+no lo tiene.
+
+Todo sigue guardado en el dispositivo, sin cuentas. El único servidor nuevo es un intermediario
+mínimo para leer la imagen de un enlace (el navegador no puede leer otra web por su cuenta), en un
+plan gratuito como Cloudflare Workers. El maniquí 2D actual basta para comprobar si la idea sirve;
+el cuerpo 3D (`#cuerpo`) pasa a ser una mejora, no la base.
+
+Dedicación prevista: 5–10 horas a la semana. Objetivo: probarla con amigas y que el proyecto pague
+sus costes.
 
 ## Supuestos por comprobar
 
+- [ ] **Los enlaces de Zara y Shein se pueden leer, al menos la imagen de la prenda.** Prueba de una
+  tarde: un Worker que devuelva la imagen `og:image` de un enlace, probado con Zara, Bershka, Shein,
+  Temu, Mango y H&M. Si falla en Zara y en Shein, el enlace se sustituye por «pega una captura».
+- [ ] **El problema se repite y lo resuelven con lo que tienen.** Seis entrevistas, al menos tres con
+  mujeres que no sean amigas cercanas, preguntando por la última vez (no por opiniones): qué
+  hicieron, si han probado apps de armario y por qué las dejaron, y qué parte de lo que se pusieron
+  compraron online y si sabrían encontrar el enlace. Se descarta si menos de 3 de 6 lo cuentan sin
+  sugerírselo.
+- [ ] **Meter prendas al usarlas basta para tener un armario útil.** Con 5 probadoras durante dos
+  meses. Se descarta si la mediana queda por debajo de 10 prendas.
+- [ ] **Abren la app antes de salir.** Se descarta si menos de 3 de 8 probadoras la usan por
+  iniciativa propia antes de un evento real en 90 días.
 - [x] **El cuerpo 3D conserva sus controles de forma al llevarlo a la web.** Comprobado el 14 de
   octubre de 2026: los cuerpos de MakeHuman se exportan con sus formas (unos 2,4 MB cada uno) y los
-  controles los deforman en el navegador, pelo incluido. Ver `modelos/cuerpo.py` y la pantalla `#cuerpo`.
-- [ ] **Va fluido en un móvil normal.** Se prueba en un teléfono con el cuerpo y dos prendas.
-- [ ] **Una foto plana da una textura creíble.** Se prueba con una prenda lisa, una de tejido
-  marcado y una con estampado grande.
-- [ ] **Cargar el armario entero no cansa.** Se prueba cronometrando diez prendas seguidas.
-
-Si el tercero falla con los estampados, la salida es mantener el cuerpo 3D y mostrar la prenda como
-la foto recortada colocada delante del cuerpo, que es lo que ya hace la prueba actual en 2D.
+  controles los deforman en el navegador, pelo incluido. Ver `modelos/cuerpo.py` y la pantalla
+  `#cuerpo`.
 
 ## Alcance mínimo
 
-Dentro:
+Fase A, el armario que se llena solo:
 
-- Dos cuerpos base, mujer y hombre, cada uno con pelo y dos controles: altura y complexión.
-  (Cambiado el 14 de octubre de 2026: antes era un solo cuerpo con un control de hombros y cadera.)
-- Dos prendas de catálogo: una camiseta y un pantalón.
-- La captura que ya funciona (foto y recorte), más elegir el tipo de prenda y extraer su color.
-- Armario guardado en el dispositivo, y vestir el maniquí eligiendo de él.
-- Girar el maniquí con el dedo.
+- Añadir una prenda por foto (ya funciona) o por enlace de tienda, con su tipo (arriba o abajo).
+- Guardar las prendas en el dispositivo, para que no se pierdan al cerrar la página.
+- Vestir el maniquí 2D eligiendo del armario guardado.
+- Guardar el conjunto elegido con un nombre de ocasión, y poder volver a él.
+
+Fase B, ¿me lo compro? (solo si A se usa):
+
+- Pegar el enlace de una prenda que no tienes y verla con las tuyas.
+- Enlace de afiliado de Shein en esa prenda.
 
 ## Lo que no vamos a hacer, y por qué
 
-- **Corte y caída exactos de cada prenda.** Es terreno de investigación; el catálogo de formas es el
-  sustituto.
+- **Prendas 3D sobre el cuerpo 3D, por ahora.** Es lo más caro y no hace falta para saber si la app
+  sirve. El cuerpo 3D ya existe y se retoma cuando A funcione.
+- **Importar los pedidos desde el correo.** Llenaría el armario de golpe, pero obliga a pedir
+  acceso al correo y a tener servidor, justo lo contrario de la privacidad que se ofrece.
+- **Votación de conjuntos por WhatsApp.** Era la única variante con difusión propia; para probar
+  con amigas no hace falta. Si el proyecto crece, es lo primero que añadir.
+- **Leer la ficha completa de la tienda (talla, tejido, precio).** Solo la imagen: es lo menos
+  frágil y lo menos agresivo con las tiendas.
 - **Cuentas y sincronización entre dispositivos.** Añade servidor y datos personales antes de saber
   si la app gusta.
-- **Tarjeta en el portfolio.** No hace falta al principio.
-- **Sugerencias automáticas de conjuntos.** Buena idea, pero no prueba nada del reto 3D.
-- **Compartir con amigos y votar.** Para después.
-- **Calzado, accesorios y abrigos.** Amplían el catálogo, que es lo más caro de producir.
-- **Caras y tono de piel, y elegir peinado.** Cada cuerpo lleva un peinado fijo; el resto es neutro.
+- **Sugerencias automáticas de conjuntos.** No prueba nada de lo que hay que comprobar.
+- **Calzado, accesorios y abrigos.** Se empieza por arriba y abajo.
 
 ## Preguntas abiertas
 
-- ¿Cuántas formas de prenda hacen falta? **Quince**, como objetivo; el alcance mínimo sigue siendo dos.
-- ¿De dónde salen las prendas 3D? **Del catálogo libre de MakeHuman siempre que se pueda.** Falta
-  comprobar si siguen al cuerpo al cambiar sus formas. El paquete oficial libre (CC0) trae sobre
-  todo conjuntos enteros (traje informal, deportivo, elegante) y zapatos, no prendas sueltas: habrá
-  que separarlos o buscar prendas sueltas en el catálogo de la comunidad, mirando la licencia de cada una.
-- ¿Foto por lotes? **No por ahora.** De una en una: cada foto es una prenda y una forma, y separar
-  varias prendas de una foto no aporta nada al 3D.
+- ¿Cómo se ve una prenda de tienda en el maniquí 2D? La foto principal de muchas tiendas lleva modelo,
+  y quitar a la persona es más difícil que quitar el fondo. Hay que ver en la prueba técnica qué
+  imagen devuelve cada tienda.
+- ¿Basta con leer la imagen pública del enlace, o las tiendas la bloquean también?
+- ¿Las fotos de tienda dan problemas de derechos si se guardan solo en el móvil de quien las usa?
+  Probablemente no, pero hay que confirmarlo antes de la fase B.
 
-## Otras direcciones que se valoraron
+## Direcciones que se valoraron
 
-- **Cuerpo 3D con la foto como prenda.** Más barata y muestra la prenda real, pero al girar el
-  maniquí la prenda es plana. Queda como salida si la textura sobre prendas 3D no convence.
-- **Armario rápido primero y 3D después.** Útil antes, pero retrasa justo lo que se quiere ver
-  funcionar.
+- **Cuerpo 3D ajustable con catálogo de prendas 3D** (dirección anterior, del 14 de octubre de
+  2026). Se aparca: la evaluación mostró que el riesgo principal no es el 3D sino el esfuerzo de
+  meter la ropa.
+- **«Esta noche»: solo 3–5 candidatas, sin armario.** Muy simple, pero no acumula nada entre usos.
+- **Solo «¿me lo compro?».** Compite de frente con los probadores de las tiendas y necesita un
+  armario guardado para tener sentido.

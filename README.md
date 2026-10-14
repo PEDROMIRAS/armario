@@ -46,9 +46,10 @@ La pantalla está en [src/Cuerpo.jsx](src/Cuerpo.jsx).
 La idea completa, con lo que se va a comprobar y lo que queda fuera, está en
 [docs/ideas/armario-virtual.md](docs/ideas/armario-virtual.md).
 
-1. Captura y armario: guardar las prendas con su tipo y su color.
-2. Conjuntar en 2D sobre el maniquí.
-3. Maniquí 3D con tus medidas y prendas con la textura de tu ropa.
+1. El armario que se llena solo: añadir prendas por foto o por enlace de tienda al usarlas,
+   guardarlas en el dispositivo y guardar los conjuntos que te pones.
+2. ¿Me lo compro?: ver una prenda de una tienda combinada con las que ya tienes.
+3. Más adelante, prendas 3D sobre el maniquí 3D.
 
 ## Tecnología
 

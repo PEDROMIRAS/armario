@@ -1,0 +1,27 @@
+[
+ {
+  "id": "namuhekam_male_polo_shirt",
+  "hueco": "arriba",
+  "nombre": "Polo"
+ },
+ {
+  "id": "elvs_male_shirt_untucked_bd1",
+  "hueco": "arriba",
+  "nombre": "Camisa"
+ },
+ {
+  "id": "mindfront_knitted_sweater_02",
+  "hueco": "arriba",
+  "nombre": "Jersey"
+ },
+ {
+  "id": "punkduck_male_classic_jeans",
+  "hueco": "abajo",
+  "nombre": "Vaqueros"
+ },
+ {
+  "id": "mindfront_male_trousers_2",
+  "hueco": "abajo",
+  "nombre": "Pantalón de vestir"
+ }
+]

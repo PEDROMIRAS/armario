@@ -29,6 +29,13 @@ después porque sin armario guardado no hay con qué combinar.
 Todo guardado en el dispositivo, sin cuentas y sin servidor. **Solo el maniquí 3D**: la foto de
 cada prenda se pone como tela de una prenda 3D del catálogo de MakeHuman sobre el cuerpo ajustable.
 
+**Cambio de rumbo, esa misma noche: cortes reales antes que la tijera.** Al ver el maniquí, Pedro
+quiso las prendas lo más realistas posible. Recortar una sola prenda no da el corte de una blusa, unos
+vaqueros o una falda de tubo, así que se montó un catálogo con las mejores formas de los paquetes de
+ropa de MakeHuman (15 de mujer y 5 de hombre), cada una en su archivo y descargada solo al ponerla.
+Ya no cuesta lo que costaba: el generador añade una prenda a partir de su nombre. La tijera queda
+aparcada, y lo que sigue es simular la caída de la tela. Lo de abajo es el plan anterior.
+
 **Siguiente: la tijera, después la habitación y después las amigas** (decidido el 14 de octubre de
 2026, por la noche). El freno de hoy es que cada forma de prenda es una malla nueva hecha en el
 sobremesa, y el catálogo no se acaba nunca. Se sustituye por **una prenda larga por familia que se

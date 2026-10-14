@@ -25,18 +25,21 @@ Una sola pantalla (`src/App.jsx`):
   complexión. Los `.glb` de `public/modelos/` los genera `modelos/cuerpo.py` con Blender 5 y MPFB,
   que **solo están en el sobremesa**.
 - **Prendas**: la foto se recorta en el móvil con IA (`src/recorte.js`). Se toma un trozo de tela
-  uniforme, se le quita la luz de la foto y se envuelve con él una prenda 3D del catálogo:
-  camiseta o pantalón (`src/textura.js`). No se usa la foto entera: su forma nunca coincide.
+  uniforme, se le quita la luz de la foto y se envuelve con él una forma 3D del catálogo, con su
+  relieve (`src/textura.js`). No se usa la foto entera: su forma nunca coincide.
+- **Catálogo**: 15 formas de mujer y 5 de hombre (camiseta, blusa, vaqueros, falda de tubo, vestido de
+  cóctel…), de los paquetes de ropa de MakeHuman. Cada una en su `.glb` con la máscara de la piel que
+  tapa, y la lista en `public/modelos/mujer.json`. La forma se elige en «Añadir prenda».
+- **Luz**: una foto 360° neutra (`public/luz.hdr`), sombras del foco y tela con brillo de tejido.
 - **Armario y conjuntos**: se guardan en el móvil, en IndexedDB (`src/almacen.js`).
-- **Huecos** (`src/huecos.js`): arriba, abajo y vestido. Un botón solo aparece si el `.glb` trae su
-  malla. El vestido (halter midi, sin mangas, del paquete Dress 01) solo lo trae `mujer.glb`.
+- **Huecos** (`src/huecos.js`): arriba, abajo y vestido. Solo se ofrece un hueco si el cuerpo tiene
+  alguna forma suya: el hombre no tiene vestidos.
 
 ## Siguiente
 
-El vestido 3D ya está ([plan](docs/planes/2026-10-14-vestido-3d.md)); falta verlo en el
-navegador con una foto real. Después, **la tijera** en vez de más mallas: el shader recorta el bajo, y así salen el
-mini, el de rodilla y el midi de una sola malla. Luego tono de piel y pelo, la habitación fija (armario
-con perchas, unas 15 h como máximo) y la prueba con 3 amigas. Orden y motivos en
+Ver en el navegador el catálogo, la luz y las sombras con fotos reales. Después, lo que queda para
+el realismo: simular la caída de la tela en Blender (probar primero con una prenda: puede temblar al
+mezclar las formas del cuerpo), las perchas del armario y la prueba con 3 amigas. Motivos en
 [la idea](docs/ideas/armario-virtual.md). El público son mujeres de 20 a 35 años que no saben qué
 ponerse para una cena o un evento, y casi todo lo que prueban son vestidos.
 
@@ -48,8 +51,9 @@ ponerse para una cena o un evento, y casi todo lo que prueban son vestidos.
   pero lo mejor sigue siendo la foto de la prenda sola.
 - **Silueta 2D: quitada.** Solo 3D, por decisión de Pedro.
 - **Probador con IA generativa: descartado.** Cuesta dinero y saca las fotos del móvil.
-- **Más mallas de prenda (blusa, falda, top…): no.** Lo que no salga de recortar camiseta, pantalón
-  o vestido con la tijera, no se hace. Tampoco pecho, cintura y cadera en el maniquí, por el peso.
+- **Cortes reales antes que la tijera** (14 de octubre de 2026, por la noche). Pedro quiere las prendas
+  lo más realistas posible: un catálogo de formas de MakeHuman en vez de recortar una sola. La tijera
+  queda aparcada. Pecho, cintura y cadera en el maniquí, aún no.
 
 ## Documentos
 

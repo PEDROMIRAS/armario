@@ -1,0 +1,77 @@
+[
+ {
+  "id": "toigo_basic_tucked_t-shirt",
+  "hueco": "arriba",
+  "nombre": "Camiseta"
+ },
+ {
+  "id": "punkduck_v_neck_top",
+  "hueco": "arriba",
+  "nombre": "Top de tirantes"
+ },
+ {
+  "id": "punkduck_off-shoulder_long-sleeve_top",
+  "hueco": "arriba",
+  "nombre": "Blusa de hombros al aire"
+ },
+ {
+  "id": "mindfront_knitted_sweater_01",
+  "hueco": "arriba",
+  "nombre": "Jersey"
+ },
+ {
+  "id": "punkduck_female_tight_jeans",
+  "hueco": "abajo",
+  "nombre": "Vaqueros pitillo"
+ },
+ {
+  "id": "elvs_jeans_straight_leg",
+  "hueco": "abajo",
+  "nombre": "Vaqueros rectos"
+ },
+ {
+  "id": "elvs_gored_elephant_pants",
+  "hueco": "abajo",
+  "nombre": "Pantalón ancho"
+ },
+ {
+  "id": "mindfront_female_trousers_1",
+  "hueco": "abajo",
+  "nombre": "Pantalón de vestir"
+ },
+ {
+  "id": "elvs_pencil_skirt",
+  "hueco": "abajo",
+  "nombre": "Falda de tubo"
+ },
+ {
+  "id": "punkduck_retro_polka_dot_skirt",
+  "hueco": "abajo",
+  "nombre": "Falda midi"
+ },
+ {
+  "id": "punkduck_black_mini_skirt",
+  "hueco": "abajo",
+  "nombre": "Minifalda"
+ },
+ {
+  "id": "toigo_halter_dress_midi",
+  "hueco": "vestido",
+  "nombre": "Vestido halter"
+ },
+ {
+  "id": "punkduck_black_cocktail_dress",
+  "hueco": "vestido",
+  "nombre": "Vestido de cóctel"
+ },
+ {
+  "id": "mindfront_f_dress_06",
+  "hueco": "vestido",
+  "nombre": "Vestido de pico"
+ },
+ {
+  "id": "elvs_simple_fashion_dress_1",
+  "hueco": "vestido",
+  "nombre": "Vestido largo"
+ }
+]

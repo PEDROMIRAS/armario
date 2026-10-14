@@ -4,7 +4,6 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { formas, extremoY } from './formas.js';
-import { HUECOS } from './huecos.js';
 import { trozoDeTela, quitarLuz, envoltura, relieve } from './textura.js';
 import { crearHabitacion } from './habitacion.js';
 import './Cuerpo.css';
@@ -14,8 +13,6 @@ const CUERPOS = [
     { id: 'mujer', nombre: 'Mujer' },
     { id: 'hombre', nombre: 'Hombre' },
 ];
-// Las prendas que trae cada archivo, como mallas con este nombre (modelos/cuerpo.py)
-const PRENDAS = HUECOS.map((hueco) => hueco.malla);
 // Tus medidas se eligen al entrar la primera vez y se recuerdan entre visitas
 const leerMedidas = () => {
     try { return JSON.parse(localStorage.getItem('medidas')); } catch { return null; }
@@ -55,13 +52,60 @@ const tela = async (prenda) => {
     return { mapa, bultos, proporcion };
 };
 
+/** Pone a una malla las formas del cuerpo (bajo, alto, delgado, corpulento) en la medida de cada una. */
+const ajustar = (malla, influencias) => {
+    for (const [nombre, valor] of Object.entries(influencias)) malla.morphTargetInfluences[malla.morphTargetDictionary[nombre]] = valor;
+};
+
+/** Suelta la memoria gráfica de una malla. */
+const soltar = (malla) => {
+    malla.geometry.dispose();
+    malla.material.map?.dispose();
+    malla.material.normalMap?.dispose();
+    malla.material.dispose();
+};
+
+/**
+ * Una forma de prenda del catálogo (vaqueros, blusa…) y la máscara de la piel que tapa. Se descarga la primera
+ * vez que se pone y se guarda en el modelo para las siguientes.
+ */
+const pieza = (modelo, forma) => {
+    if (!modelo.ropa.has(forma)) {
+        const imagen = new Image();
+        imagen.src = `${modelo.url}/${forma}.png`;
+        modelo.ropa.set(forma, Promise.all([new GLTFLoader().loadAsync(`${modelo.url}/${forma}.glb`), imagen.decode()]).then(([gltf]) => {
+            let malla;
+            gltf.scene.traverse((objeto) => { if (objeto.isMesh) malla = objeto; });
+            // Tela: mate, con el brillo suave de los tejidos en los bordes (sheen). Es una sola capa: por las
+            // mangas y el cuello se ve su cara interior
+            malla.material = new THREE.MeshPhysicalMaterial({
+                roughness: 0.85, sheen: 1, sheenRoughness: 0.6, sheenColor: 0x404040,
+                normalScale: new THREE.Vector2(0.6, 0.6), side: THREE.DoubleSide,
+            });
+            malla.castShadow = malla.receiveShadow = true;
+            malla.visible = false;
+            if (modelo.descartado) soltar(malla);
+            else {
+                ajustar(malla, modelo.influencias);
+                modelo.grupo.add(malla);
+                modelo.mallas.push(malla);
+            }
+            return { malla, mascara: imagen };
+        }).catch((error) => {
+            modelo.ropa.delete(forma); // para que se pueda volver a intentar
+            throw error;
+        }));
+    }
+    return modelo.ropa.get(forma);
+};
+
 /**
  * Maniquí 3D ajustable, vestido con las fotos de las prendas puestas.
  * @param {object} props
- * @param {Object<string, {id: number|string, imagen: Blob, ancho: number, referencia: number[]}>} props.prendas
- *   La prenda puesta en cada malla del catálogo (camiseta, pantalon, vestido); sin prenda, no se pinta.
- * @param {(mallas: string[]) => void} props.alCargar - Recibe las mallas de prenda que trae el cuerpo cargado:
- *   no todos los modelos traen todas.
+ * @param {Object<string, {id: number|string, imagen: Blob, ancho: number, referencia: number[], forma: string}>} props.prendas
+ *   La prenda puesta en cada hueco (arriba, abajo, vestido), con la forma del catálogo con la que se ve.
+ * @param {(catalogo: {id: string, hueco: string, nombre: string}[]) => void} props.alCargar - Recibe el
+ *   catálogo de formas del cuerpo cargado (modelos/cuerpo.py → mujer.json): cada cuerpo tiene las suyas.
  */
 export default function Cuerpo({ prendas, alCargar }) {
     const lienzo = useRef(null);
@@ -189,75 +233,75 @@ export default function Cuerpo({ prendas, alCargar }) {
     useEffect(() => {
         let cancelado = false;
         setEstado('Cargando el cuerpo…');
-        new GLTFLoader().load(
-            `${import.meta.env.BASE_URL}modelos/${sexo}.glb`,
-            (gltf) => {
-                if (cancelado) return;
-                const mallas = [];
-                let cuerpo;
-                gltf.scene.traverse((objeto) => {
-                    if (!objeto.isMesh) return;
-                    mallas.push(objeto);
-                    objeto.castShadow = objeto.receiveShadow = true;
-                    // El cuerpo llega en varias piezas, que se distinguen por el nombre de su material: "piel" es
-                    // la que nunca se tapa, y "bajo_camiseta" o "bajo_camiseta_pantalon", la que queda bajo esas prendas
-                    const pieza = objeto.material.name;
-                    if (pieza === 'piel' || pieza.startsWith('bajo_')) {
-                        // La piel trae su textura. Con un brillo suave y rosado en los bordes, como la piel con luz
-                        // de lado, en vez del brillo de plástico
-                        const textura = objeto.material.map;
-                        objeto.material.dispose();
-                        objeto.material = new THREE.MeshPhysicalMaterial({ map: textura, roughness: 0.6, sheen: 0.4, sheenRoughness: 0.5, sheenColor: 0xffc8b0 });
-                        objeto.userData.bajo = pieza.split('_').slice(1);
-                        if (pieza === 'piel') cuerpo = objeto;
-                    } else if (PRENDAS.includes(objeto.name)) {
-                        // Tela: mate, con el brillo suave de los tejidos en los bordes (sheen). Es una sola capa: por las
-                        // mangas y el cuello se ve su cara interior
-                        objeto.material = new THREE.MeshPhysicalMaterial({
-                            roughness: 0.85, sheen: 1, sheenRoughness: 0.6, sheenColor: 0x404040,
-                            normalScale: new THREE.Vector2(0.6, 0.6), side: THREE.DoubleSide,
-                        });
-                        objeto.userData.prenda = objeto.name;
-                    } else {
-                        // El pelo son láminas con textura: se recorta por su transparencia y se ve por las dos caras
-                        objeto.material.alphaTest = 0.4;
-                        objeto.material.transparent = false;
-                        // El cargador la desactiva en los materiales transparentes; sin ella, el cuerpo y la prenda se pintan encima
-                        objeto.material.depthWrite = true;
-                        objeto.material.side = THREE.DoubleSide;
-                    }
-                });
-                const forma = (nombre) => cuerpo.geometry.morphAttributes.position[cuerpo.morphTargetDictionary[nombre]];
-                // Las medidas van antes de añadirlo: si el archivo no trae el cuerpo esperado, no llega a la escena
-                const medidas = {
-                    base: Math.round(extremoY(cuerpo.geometry.attributes.position) * 100),
-                    tramoMas: extremoY(forma('alto')) * 100,
-                    tramoMenos: -extremoY(forma('bajo'), -1) * 100,
-                };
-                maniqui.current.add(gltf.scene);
-                setModelo({ grupo: gltf.scene, mallas, ...medidas });
-                setEstado('');
-            },
-            undefined,
-            () => { if (!cancelado) setEstado('No se ha podido cargar el cuerpo.'); }
-        );
+        const url = `${import.meta.env.BASE_URL}modelos/${sexo}`;
+        Promise.all([new GLTFLoader().loadAsync(`${url}.glb`), fetch(`${url}.json`).then((respuesta) => respuesta.json())]).then(([gltf, catalogo]) => {
+            if (cancelado) return;
+            const mallas = [];
+            let cuerpo;
+            // La piel que tapan las prendas puestas no se pinta: si no, asoma por la tela ceñida. Cada prenda trae
+            // una máscara con la piel que tapa (modelos/cuerpo.py), y las de lo que llevas se juntan en esta textura
+            const tapada = new THREE.CanvasTexture(Object.assign(document.createElement('canvas'), { width: 512, height: 512 }));
+            tapada.flipY = false; // como las texturas del modelo
+            tapada.minFilter = tapada.magFilter = THREE.NearestFilter;
+            tapada.generateMipmaps = false;
+            gltf.scene.traverse((objeto) => {
+                if (!objeto.isMesh) return;
+                mallas.push(objeto);
+                objeto.castShadow = objeto.receiveShadow = true;
+                if (objeto.material.name === 'piel') {
+                    cuerpo = objeto;
+                    // La piel trae su textura. Con un brillo suave y rosado en los bordes, como la piel con luz
+                    // de lado, en vez del brillo de plástico
+                    const textura = objeto.material.map;
+                    objeto.material.dispose();
+                    objeto.material = new THREE.MeshPhysicalMaterial({ map: textura, roughness: 0.6, sheen: 0.4, sheenRoughness: 0.5, sheenColor: 0xffc8b0 });
+                    objeto.material.onBeforeCompile = (shader) => {
+                        shader.uniforms.tapada = { value: tapada };
+                        shader.fragmentShader = `uniform sampler2D tapada;\n${shader.fragmentShader.replace(
+                            '#include <map_fragment>',
+                            'if (texture2D(tapada, vMapUv).r > 0.5) discard;\n#include <map_fragment>'
+                        )}`;
+                    };
+                } else {
+                    // El pelo, las cejas y las pestañas son láminas con textura: se recortan por su transparencia
+                    // y se ven por las dos caras
+                    objeto.material.alphaTest = 0.4;
+                    objeto.material.transparent = false;
+                    // El cargador la desactiva en los materiales transparentes; sin ella, el cuerpo y la prenda se pintan encima
+                    objeto.material.depthWrite = true;
+                    objeto.material.side = THREE.DoubleSide;
+                }
+            });
+            const forma = (nombre) => cuerpo.geometry.morphAttributes.position[cuerpo.morphTargetDictionary[nombre]];
+            // Las medidas van antes de añadirlo: si el archivo no trae el cuerpo esperado, no llega a la escena
+            const medidas = {
+                base: Math.round(extremoY(cuerpo.geometry.attributes.position) * 100),
+                tramoMas: extremoY(forma('alto')) * 100,
+                tramoMenos: -extremoY(forma('bajo'), -1) * 100,
+            };
+            maniqui.current.add(gltf.scene);
+            // `ropa`: las prendas ya descargadas (forma -> promesa de {malla, mascara}); `influencias`: las formas
+            // del cuerpo aplicadas ahora, para ponérselas también a una prenda que llegue después
+            setModelo({ grupo: gltf.scene, mallas, catalogo, url, tapada, ropa: new Map(), influencias: {}, ...medidas });
+            setEstado('');
+        }).catch((error) => {
+            console.error(error);
+            if (!cancelado) setEstado('No se ha podido cargar el cuerpo.');
+        });
         return () => { cancelado = true; };
     }, [sexo]);
 
     // Al cambiar de cuerpo, el anterior sale de la escena y suelta su memoria gráfica
     useEffect(() => () => {
         if (!modelo) return;
+        modelo.descartado = true; // una prenda que termine de descargarse después ya no se añade
         maniqui.current.remove(modelo.grupo);
-        for (const malla of modelo.mallas) {
-            malla.geometry.dispose();
-            malla.material.map?.dispose();
-            malla.material.normalMap?.dispose();
-            malla.material.dispose();
-        }
+        for (const malla of modelo.mallas) soltar(malla);
+        modelo.tapada.dispose();
     }, [modelo]);
 
     useEffect(() => {
-        if (modelo) alCargar(modelo.mallas.map((m) => m.userData.prenda).filter(Boolean));
+        if (modelo) alCargar(modelo.catalogo);
     }, [modelo, alCargar]);
 
     const alturaActual = altura ?? modelo?.base ?? 166;
@@ -269,11 +313,9 @@ export default function Cuerpo({ prendas, alCargar }) {
 
     useEffect(() => {
         if (!modelo) return;
-        const influencias = formas(alturaActual, complexion, modelo);
-        // El pelo lleva las mismas formas que el cuerpo, para seguirlo
-        for (const malla of modelo.mallas) {
-            for (const [nombre, valor] of Object.entries(influencias)) malla.morphTargetInfluences[malla.morphTargetDictionary[nombre]] = valor;
-        }
+        modelo.influencias = formas(alturaActual, complexion, modelo);
+        // El pelo y la ropa llevan las mismas formas que el cuerpo, para seguirlo
+        for (const malla of modelo.mallas) ajustar(malla, modelo.influencias);
         pintar.current();
     }, [modelo, alturaActual, complexion]);
 
@@ -281,10 +323,13 @@ export default function Cuerpo({ prendas, alCargar }) {
         if (!modelo) return;
         let cancelado = false;
         (async () => {
-            for (const malla of modelo.mallas) {
-                const prenda = prendas[malla.userData.prenda];
+            const puestas = Object.values(prendas);
+            const piezas = await Promise.all(puestas.map((prenda) => pieza(modelo, prenda.forma)));
+            if (cancelado) return;
+            for (const [i, prenda] of puestas.entries()) {
+                const { malla } = piezas[i];
                 // Solo se rehace la textura si cambia la prenda de esa malla (el objeto se crea de nuevo en cada cambio: vale el id)
-                if (!prenda || malla.userData.foto === prenda.id) continue;
+                if (malla.userData.foto === prenda.id) continue;
                 const { mapa, bultos, proporcion } = await tela(prenda);
                 if (cancelado) { mapa.dispose(); bultos.dispose(); return; }
                 const uv = envoltura(malla.geometry.attributes.position.array, prenda.referencia, proporcion);
@@ -296,11 +341,19 @@ export default function Cuerpo({ prendas, alCargar }) {
                 malla.material.needsUpdate = true;
                 malla.userData.foto = prenda.id;
             }
-            for (const malla of modelo.mallas) {
-                if (malla.userData.prenda) malla.visible = Boolean(prendas[malla.userData.prenda]);
-                // La piel que queda bajo una prenda puesta no se pinta: si no, asoma por la tela ceñida
-                if (malla.userData.bajo) malla.visible = !malla.userData.bajo.some((id) => prendas[id]);
+            const llevadas = new Set(puestas.map((prenda) => prenda.forma));
+            for (const [forma, descarga] of modelo.ropa) {
+                const { malla } = await descarga;
+                malla.visible = llevadas.has(forma);
             }
+            // La piel tapada: las máscaras de lo que llevas, juntas (lo blanco de cualquiera queda blanco)
+            const lienzo = modelo.tapada.image;
+            const pincel = lienzo.getContext('2d');
+            pincel.globalCompositeOperation = 'source-over';
+            pincel.clearRect(0, 0, lienzo.width, lienzo.height);
+            pincel.globalCompositeOperation = 'lighten';
+            for (const { mascara } of piezas) pincel.drawImage(mascara, 0, 0, lienzo.width, lienzo.height);
+            modelo.tapada.needsUpdate = true;
             pintar.current();
         })().catch((error) => {
             console.error(error);

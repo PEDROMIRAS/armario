@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { quitarFondo } from './recorte.js';
-import { HUECOS, vestir } from './huecos.js';
+import { HUECOS, vestir, formaDe } from './huecos.js';
 import * as almacen from './almacen.js';
 import './App.css';
 
@@ -29,9 +29,9 @@ export default function App() {
     const [estado, setEstado] = useState('');
     const [ocupado, setOcupado] = useState(false);
     const menu = useRef(null);
-    // Las mallas de prenda que trae el cuerpo cargado: un hueco sin su malla no se ofrece
-    const [mallas, setMallas] = useState([]);
-    const huecos = HUECOS.filter((hueco) => mallas.includes(hueco.malla));
+    // Las formas 3D que tiene el cuerpo cargado ({id, hueco, nombre}): un hueco sin ninguna no se ofrece
+    const [catalogo, setCatalogo] = useState([]);
+    const huecos = HUECOS.filter((hueco) => catalogo.some((forma) => forma.hueco === hueco.id));
 
     useEffect(() => {
         let cancelado = false;
@@ -50,11 +50,11 @@ export default function App() {
         try { localStorage.setItem('puestas', JSON.stringify(puestas)); } catch { /* sin almacenamiento: solo se olvida */ }
     }, [puestas]);
 
-    const poner = async (hueco, foto) => {
+    const poner = async (hueco, forma, foto) => {
         if (!foto) return;
         setOcupado(true);
         try {
-            const prenda = { hueco: hueco.id, ...(await quitarFondo(foto, setEstado, hueco.referencia)) };
+            const prenda = { hueco: hueco.id, forma: forma.id, ...(await quitarFondo(foto, setEstado, hueco.referencia)) };
             const id = await guardarEn(almacen.prendas, prenda);
             setArmario((antes) => [...antes, conUrl({ ...prenda, id })]);
             setPuestas((antes) => vestir(antes, hueco, id));
@@ -101,11 +101,12 @@ export default function App() {
         setConjuntos((antes) => antes.filter((c) => c !== conjunto));
     };
 
-    // Lo que lleva puesto el maniquí, por malla del catálogo, con la franja donde se midió cada foto
-    const vestido = useMemo(() => Object.fromEntries(HUECOS.flatMap(({ id, malla, referencia }) => {
-        const prenda = mallas.includes(malla) && armario.find((p) => p.id === puestas[id]);
-        return prenda ? [[malla, { ...prenda, referencia }]] : [];
-    })), [armario, puestas, mallas]);
+    // Lo que lleva puesto el maniquí, por hueco: la foto, la forma 3D con la que se ve y la franja donde se midió
+    const vestido = useMemo(() => Object.fromEntries(HUECOS.flatMap(({ id, referencia }) => {
+        const prenda = armario.find((p) => p.id === puestas[id]);
+        const forma = prenda && formaDe(prenda, catalogo);
+        return forma ? [[id, { ...prenda, forma, referencia }]] : [];
+    })), [armario, puestas, catalogo]);
     const llevasAlgo = Object.keys(vestido).length > 0;
 
     return (
@@ -117,7 +118,7 @@ export default function App() {
             </p>
 
             <Suspense fallback={<p className="estado">Cargando el maniquí…</p>}>
-                <Cuerpo prendas={vestido} alCargar={setMallas} />
+                <Cuerpo prendas={vestido} alCargar={setCatalogo} />
             </Suspense>
 
             <p role="status" className="estado">{estado}</p>
@@ -129,15 +130,20 @@ export default function App() {
                 </summary>
                 <div className="tipos">
                     {huecos.map((hueco) => (
-                        <label key={hueco.id}>
-                            {hueco.nombre}
-                            <input
-                                type="file"
-                                accept="image/*"
-                                disabled={ocupado}
-                                onChange={(e) => { menu.current.open = false; poner(hueco, e.target.files[0]); e.target.value = ''; }}
-                            />
-                        </label>
+                        <fieldset key={hueco.id}>
+                            <legend>{hueco.nombre}</legend>
+                            {catalogo.filter((forma) => forma.hueco === hueco.id).map((forma) => (
+                                <label key={forma.id}>
+                                    {forma.nombre}
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        disabled={ocupado}
+                                        onChange={(e) => { menu.current.open = false; poner(hueco, forma, e.target.files[0]); e.target.value = ''; }}
+                                    />
+                                </label>
+                            ))}
+                        </fieldset>
                     ))}
                 </div>
             </details>

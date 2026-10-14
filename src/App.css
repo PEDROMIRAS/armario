@@ -54,10 +54,30 @@ h1 {
     right: 0;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    max-height: 60vh;
+    overflow-y: auto;
     border: 2px solid var(--silueta);
     border-radius: 0.75rem;
     background: var(--fondo);
+}
+
+.tipos fieldset {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.tipos legend {
+    width: 100%;
+    padding: 0.6rem 1rem 0.2rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--texto-suave);
 }
 
 .tipos label {

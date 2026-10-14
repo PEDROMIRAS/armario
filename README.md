@@ -31,28 +31,25 @@ El código está en [src/recorte.js](src/recorte.js) (pasos 1 a 3) y [src/textur
 
 ## El cuerpo 3D
 
-Los cuerpos, el pelo y la ropa son de [MakeHuman](http://www.makehumancommunity.org/), de licencia
-CC0. Están en `public/modelos/mujer.glb` (4,1 MB) y `hombre.glb` (3,0 MB), y los genera
-[modelos/cuerpo.py](modelos/cuerpo.py): crea cada cuerpo base con su piel, ojos, cejas, pestañas, peinado, zapatos y un conjunto de ropa,
-le baja los brazos y relaja las manos (MakeHuman lo crea con los brazos abiertos) y guarda como formas sus cuatro extremos
-(delgado, corpulento, bajo y alto). La app mezcla esas formas según los controles, y el pelo y las
-prendas llevan las mismas para seguir al cuerpo.
+Los cuerpos, el pelo y la ropa son de [MakeHuman](http://www.makehumancommunity.org/). Los genera
+[modelos/cuerpo.py](modelos/cuerpo.py): crea cada cuerpo base con su piel, ojos, cejas, pestañas,
+peinado y zapatos, le baja los brazos y relaja las manos (MakeHuman lo crea con los brazos abiertos)
+y guarda como formas sus cuatro extremos (delgado, corpulento, bajo y alto). La app mezcla esas
+formas según los controles, y el pelo y las prendas llevan las mismas para seguir al cuerpo.
 
-Las prendas salen de los conjuntos `female_casualsuit01` y `male_casualsuit04` del paquete, que
-vienen en dos piezas sueltas: el generador las separa en `camiseta` y `pantalon`. La parte del
-cuerpo que queda bajo cada prenda va en el archivo como pieza aparte y la app no la pinta mientras
-la prenda está puesta: así el cuerpo no asoma por la tela ceñida.
-
-El cuerpo de mujer lleva además un vestido: `toigo_halter_dress_midi` (de Margaret Toigo, CC0) del
-paquete Dress 01, entallado, con cuello halter y hasta media pierna, y unas bailarinas negras,
-`toigo_ballet_flats` (CC0), del paquete Shoes 01.
+- `public/modelos/mujer.glb` (3,3 MB) y `hombre.glb` (2,7 MB): el cuerpo, sin ropa.
+- `public/modelos/mujer.json` y `hombre.json`: el catálogo de formas de prenda de cada cuerpo (15 de
+  mujer y 5 de hombre), con su hueco y su nombre en la app.
+- `public/modelos/mujer/<prenda>.glb` (de 100 KB a 1 MB): cada forma, que la app descarga solo cuando
+  te la pones, y `<prenda>.png`, la máscara de la piel que tapa. La app junta las máscaras de lo que
+  llevas y no pinta esa piel: así no asoma por la tela ceñida.
 
 Para regenerarlos hace falta [Blender](https://www.blender.org/) 5 con la extensión MPFB y los
-paquetes de recursos libres de MakeHuman
+paquetes de recursos de MakeHuman descomprimidos en una misma carpeta: el de sistema
 ([makehuman_system_assets_cc0.zip](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip),
-280 MB; [dress01_cc0.zip](https://files.makehumancommunity.org/asset_packs/dress01/dress01_cc0.zip),
-44 MB; y [shoes01_cc0.zip](https://files.makehumancommunity.org/asset_packs/shoes01/shoes01_cc0.zip),
-79 MB) descomprimidos en la misma carpeta:
+280 MB) y los de ropa de la [lista de paquetes](https://static.makehumancommunity.org/assets/assetpacks.html):
+Dress 01, 02 y 03, Shirts 01, 02 y 03, Pants 01 y 02, Skirts 01 y 02 y Shoes 01. Las cuadrículas con
+las prendas que se valoraron están en [docs/pruebas/prendas/](docs/pruebas/prendas/).
 
 ```bash
 MAKEHUMAN_ASSETS=/ruta/al/paquete blender -b --python modelos/cuerpo.py
@@ -100,6 +97,15 @@ npm run build   # versión de producción en dist/
 ```
 
 ## Licencia
+
+Las prendas de MakeHuman son CC0, salvo estas, que son CC-BY y se usan citando a su autor:
+Elvaerwyn (`elvs_jeans_straight_leg`, `elvs_gored_elephant_pants`, `elvs_pencil_skirt`,
+`elvs_simple_fashion_dress_1`, `elvs_male_shirt_untucked_bd1`), Mindfront
+(`mindfront_knitted_sweater_01` y `02`, `mindfront_female_trousers_1`, `mindfront_male_trousers_2`,
+`mindfront_f_dress_06`) y punkduck (`punkduck_v_neck_top`, `punkduck_off-shoulder_long-sleeve_top`,
+`punkduck_female_tight_jeans`, `punkduck_male_classic_jeans`, `punkduck_retro_polka_dot_skirt`,
+`punkduck_black_mini_skirt`, `punkduck_black_cocktail_dress`). Todas en el
+[repositorio de recursos de MakeHuman](http://www.makehumancommunity.org/content/user_contributed_assets.html).
 
 La librería que quita el fondo tiene licencia AGPL-3.0, que obliga a publicar el código de las
 aplicaciones que la usan. Este repositorio es público por ese motivo.

@@ -1,16 +1,20 @@
-# Genera public/modelos/mujer.glb y hombre.glb: el cuerpo base de MakeHuman (CC0) con pelo, un
-# conjunto de dos prendas y, si lo tiene, un vestido, y una forma por cada extremo de los controles
-# de la app, para mezclarlas en el navegador.
+# Genera los cuerpos de la app en public/modelos/: el cuerpo base de MakeHuman (CC0) con su piel, cara,
+# pelo y zapatos (mujer.glb, hombre.glb) y, aparte, cada prenda de su catálogo (mujer/<prenda>.glb),
+# todo con una forma por cada extremo de los controles de la app, para mezclarlas en el navegador.
+# Cada prenda lleva también una máscara (mujer/<prenda>.png) con la piel que tapa, y el catálogo de
+# cada cuerpo va en mujer.json.
 #
-# Hace falta Blender 5.x con la extensión MPFB y el paquete de recursos libres de MakeHuman
-# ("makehuman_system_assets_cc0.zip") descomprimido; su carpeta se pasa en MAKEHUMAN_ASSETS.
+# Hace falta Blender 5.x con la extensión MPFB y los paquetes de recursos de MakeHuman (el de sistema
+# y los de ropa que se citan en el README) descomprimidos en una carpeta, que se pasa en MAKEHUMAN_ASSETS.
 # Uso, desde la raíz del repositorio:
 #   MAKEHUMAN_ASSETS=/ruta/al/paquete blender -b --python modelos/cuerpo.py
+import json
 import math
 import os
 
 import bmesh
 import bpy
+import numpy as np
 from mathutils import Matrix, Quaternion
 from mathutils.bvhtree import BVHTree
 from bl_ext.blender_org.mpfb.services.humanservice import HumanService
@@ -19,13 +23,38 @@ from bl_ext.blender_org.mpfb.services.targetservice import TargetService
 RECURSOS = os.environ["MAKEHUMAN_ASSETS"]
 SALIDA = os.path.join(os.getcwd(), "public", "modelos")
 
-# nombre del archivo -> (valor de "gender" en MakeHuman, piel, peinado, zapatos, conjunto, vestido o None)
-# El conjunto tiene que venir en dos piezas sueltas, la de arriba y el pantalón.
-# El vestido es del paquete Dress 01 y las bailarinas, del Shoes 01 (los dos CC0); se descomprimen en
-# la misma carpeta de recursos.
+# nombre del archivo -> (valor de "gender" en MakeHuman, piel, peinado, zapatos)
 CUERPOS = {
-    "mujer": (0.0, "young_caucasian_female", "long01", "toigo_ballet_flats", "female_casualsuit01", "toigo_halter_dress_midi"),
-    "hombre": (1.0, "young_caucasian_male", "short02", "shoes04", "male_casualsuit04", None),
+    "mujer": (0.0, "young_caucasian_female", "long01", "toigo_ballet_flats"),
+    "hombre": (1.0, "young_caucasian_male", "short02", "shoes04"),
+}
+# El catálogo de cada cuerpo: (prenda de MakeHuman, hueco de la app, nombre en la app). La primera de
+# cada hueco es la que se usa para una foto guardada antes de que hubiera catálogo.
+CATALOGO = {
+    "mujer": [
+        ("toigo_basic_tucked_t-shirt", "arriba", "Camiseta"),
+        ("punkduck_v_neck_top", "arriba", "Top de tirantes"),
+        ("punkduck_off-shoulder_long-sleeve_top", "arriba", "Blusa de hombros al aire"),
+        ("mindfront_knitted_sweater_01", "arriba", "Jersey"),
+        ("punkduck_female_tight_jeans", "abajo", "Vaqueros pitillo"),
+        ("elvs_jeans_straight_leg", "abajo", "Vaqueros rectos"),
+        ("elvs_gored_elephant_pants", "abajo", "Pantalón ancho"),
+        ("mindfront_female_trousers_1", "abajo", "Pantalón de vestir"),
+        ("elvs_pencil_skirt", "abajo", "Falda de tubo"),
+        ("punkduck_retro_polka_dot_skirt", "abajo", "Falda midi"),
+        ("punkduck_black_mini_skirt", "abajo", "Minifalda"),
+        ("toigo_halter_dress_midi", "vestido", "Vestido halter"),
+        ("punkduck_black_cocktail_dress", "vestido", "Vestido de cóctel"),
+        ("mindfront_f_dress_06", "vestido", "Vestido de pico"),
+        ("elvs_simple_fashion_dress_1", "vestido", "Vestido largo"),
+    ],
+    "hombre": [
+        ("namuhekam_male_polo_shirt", "arriba", "Polo"),
+        ("elvs_male_shirt_untucked_bd1", "arriba", "Camisa"),
+        ("mindfront_knitted_sweater_02", "arriba", "Jersey"),
+        ("punkduck_male_classic_jeans", "abajo", "Vaqueros"),
+        ("mindfront_male_trousers_2", "abajo", "Pantalón de vestir"),
+    ],
 }
 # Las piezas de la cara: (carpeta, nombre, tipo en MPFB, textura). Sin ellas la cara es de muñeco.
 CARA = [
@@ -37,6 +66,8 @@ CARA = [
 LADO_PIEL = 1024
 # Los zapatos ocupan unos pocos píxeles en pantalla
 LADO_ZAPATOS = 256
+# La máscara de la piel tapada por cada prenda, en el espacio de la textura de la piel
+LADO_MASCARA = 512
 # MakeHuman crea el cuerpo con los brazos abiertos; se bajan este ángulo para una postura de pie natural
 BRAZOS = math.radians(30)
 # Y estira el codo (MakeHuman lo deja doblado hacia delante) y dobla un poco los dedos: la mano en reposo
@@ -58,16 +89,16 @@ FORMAS = {
 ROPA = 3 + len(CARA)
 
 
-def crear(genero, peinado, zapatos, conjunto, vestido, cambios):
-    """Cuerpo con el pelo, la cara, los zapatos y la ropa ya ajustados a él. Devuelve [cuerpo, pelo, *cara, zapatos, ropa] y, si lo hay, el vestido, con las formas y la postura aplicadas."""
+def crear(genero, peinado, zapatos, prendas, cambios):
+    """Cuerpo con el pelo, la cara, los zapatos y las prendas ya ajustados a él. Devuelve [cuerpo, pelo, *cara, zapatos, *prendas], con las formas y la postura aplicadas."""
     macro = TargetService.get_default_macro_info_dict()
     macro.update({"gender": genero, **cambios})
     cuerpo = HumanService.create_human(macro_detail_dict=macro)
     # El esqueleto solo sirve para poner la postura: no se exporta
     esqueleto = HumanService.add_builtin_rig(cuerpo, "default")
     mallas = [cuerpo]
-    recursos = [("hair", peinado, "Hair"), *(pieza[:3] for pieza in CARA), ("clothes", zapatos, "Clothes"), ("clothes", conjunto, "Clothes")]
-    recursos += [("clothes", vestido, "Clothes")] if vestido else []
+    recursos = [("hair", peinado, "Hair"), *(pieza[:3] for pieza in CARA), ("clothes", zapatos, "Clothes")]
+    recursos += [("clothes", prenda, "Clothes") for prenda in prendas]
     for carpeta, nombre, tipo in recursos:
         antes = set(bpy.data.objects)
         HumanService.add_mhclo_asset(
@@ -159,101 +190,40 @@ def poner_material(malla, material):
     malla.data.materials.append(material)
 
 
-for archivo, (genero, piel, peinado, zapatos, conjunto, nombre_vestido) in CUERPOS.items():
-    bpy.ops.wm.read_factory_settings(use_empty=True)
-    mallas = crear(genero, peinado, zapatos, conjunto, nombre_vestido, {})
-    cuerpo, pelo, *cara, calzado = mallas[:ROPA]
-    ropa, *vestido = mallas[ROPA:]
-    cuerpo.name, pelo.name, calzado.name = "cuerpo", "pelo", "zapatos"
-    poner_material(calzado, material_simple("zapatos", textura(os.path.join(RECURSOS, "clothes", zapatos), LADO_ZAPATOS), transparente=False))
-    for malla, (_, nombre, _, ruta) in zip(cara, CARA):
-        malla.name = nombre
-        poner_material(malla, material_simple(nombre, bpy.data.images.load(os.path.join(RECURSOS, ruta))))
-    for malla in vestido:
-        malla.name = "vestido"
-        assert malla.name == "vestido"  # la app la reconoce por este nombre
-        malla.data.materials.clear()
-    for objeto in mallas:
-        objeto.shape_key_add(name="Basis")
+def mascara(cuerpo, caras):
+    """Los píxeles de la textura de la piel que caen en estas caras del cuerpo, más uno de margen."""
+    uv = np.array([esquina.uv[:] for esquina in cuerpo.data.uv_layers.active.data])
+    tapada = np.zeros((LADO_MASCARA, LADO_MASCARA), bool)
+    centros = (np.arange(LADO_MASCARA) + 0.5) / LADO_MASCARA
+    for cara in caras:
+        esquinas = uv[list(cara.loop_indices)]
+        for k in range(1, len(esquinas) - 1):
+            a, b, c = esquinas[0], esquinas[k], esquinas[k + 1]
+            x0, y0 = np.clip(np.floor(np.minimum.reduce([a, b, c]) * LADO_MASCARA).astype(int), 0, LADO_MASCARA)
+            x1, y1 = np.clip(np.ceil(np.maximum.reduce([a, b, c]) * LADO_MASCARA).astype(int), 0, LADO_MASCARA)
+            x, y = np.meshgrid(centros[x0:x1], centros[y0:y1])
+            # De qué lado de cada arista del triángulo cae cada píxel: dentro, si de todas del mismo
+            lados = [(q[0] - p[0]) * (y - p[1]) - (q[1] - p[1]) * (x - p[0]) for p, q in ((a, b), (b, c), (c, a))]
+            dentro = np.logical_and.reduce([l >= 0 for l in lados]) | np.logical_and.reduce([l <= 0 for l in lados])
+            tapada[y0:y1, x0:x1] |= dentro
+    # Sin margen, en el filo entre una cara tapada y una a la vista podría asomar una línea de piel
+    return tapada | np.roll(tapada, 1, 0) | np.roll(tapada, -1, 0) | np.roll(tapada, 1, 1) | np.roll(tapada, -1, 1)
 
-    for nombre, cambios in FORMAS.items():
-        variantes = crear(genero, peinado, zapatos, conjunto, nombre_vestido, cambios)
-        for base, variante in zip(mallas, variantes):
-            copiar_forma(base, variante, nombre)
-        for variante in reversed(variantes):
-            bpy.data.objects.remove(variante)
 
-    # La malla trae geometría auxiliar (guías para la ropa y las articulaciones) que no es cuerpo. Los
-    # pies dentro de los zapatos también sobran: los zapatos van siempre puestos.
-    indice_cuerpo = cuerpo.vertex_groups["body"].index
-    mascara_zapatos = "Delete." + zapatos
-    indice_pies = cuerpo.vertex_groups[mascara_zapatos].index
-    malla = bmesh.new()
-    malla.from_mesh(cuerpo.data)
-    capa = malla.verts.layers.deform.verify()
-    bmesh.ops.delete(malla, geom=[v for v in malla.verts if indice_cuerpo not in v[capa] or indice_pies in v[capa]], context="VERTS")
-    malla.to_mesh(cuerpo.data)
-    malla.free()
+def guardar_mascara(tapada, destino):
+    imagen = bpy.data.images.new("mascara", LADO_MASCARA, LADO_MASCARA)
+    pixeles = np.zeros((LADO_MASCARA, LADO_MASCARA, 4), np.float32)
+    pixeles[tapada] = 1  # blanco donde la prenda tapa la piel; las filas van de abajo arriba, como la textura
+    pixeles[..., 3] = 1
+    imagen.pixels = pixeles.ravel()
+    imagen.filepath_raw = destino
+    imagen.file_format = "PNG"
+    imagen.save()
 
-    # El conjunto se separa en sus dos piezas, ya con sus formas: la que llega más alto es la de arriba.
-    # Van sin material: la app les pone el color.
-    ropa.data.materials.clear()
+
+def exportar(objetos, destino):
     bpy.ops.object.select_all(action="DESELECT")
-    ropa.select_set(True)
-    bpy.context.view_layer.objects.active = ropa
-    bpy.ops.object.mode_set(mode="EDIT")
-    bpy.ops.mesh.select_all(action="SELECT")
-    bpy.ops.mesh.separate(type="LOOSE")
-    bpy.ops.object.mode_set(mode="OBJECT")
-    pantalon, camiseta = sorted(bpy.context.selected_objects, key=lambda o: max(v.co.z for v in o.data.vertices))
-    pantalon.name, camiseta.name = "pantalon", "camiseta"
-    assert (pantalon.name, camiseta.name) == ("pantalon", "camiseta")  # la app las reconoce por este nombre
-    prendas = (camiseta, pantalon, *vestido)
-    mallas = [cuerpo, pelo, *cara, calzado, *prendas]
-
-    # Cada prenda trae la lista de vértices del cuerpo que tapa. Esas caras van con un material que
-    # dice qué prendas tienen encima (una, o varias en la cintura), para que salgan como piezas
-    # aparte y la app esconda las de las prendas puestas: si no, el cuerpo asoma por la tela ceñida.
-    # (la otra máscara del cuerpo, "body", es la que esconde la geometría auxiliar)
-    tapado = {cuerpo.vertex_groups[m.vertex_group].index for m in cuerpo.modifiers if m.type == "MASK" and m.vertex_group not in ("body", mascara_zapatos)}
-    assert len(tapado) == len(prendas) - 1, tapado  # una máscara por el conjunto y otra por el vestido
-    telas = [
-        BVHTree.FromPolygons([p.matrix_world @ v.co for v in p.data.vertices], [tuple(c.vertices) for c in p.data.polygons])
-        for p in prendas
-    ]
-    cuerpo.data.materials.clear()
-    imagen_piel = textura(os.path.join(RECURSOS, "skins", piel), LADO_PIEL)
-    # El índice de cada material suma 1 por la camiseta, 2 por el pantalón y 4 por el vestido:
-    # "piel", "bajo_camiseta", "bajo_pantalon", "bajo_camiseta_pantalon", "bajo_vestido"…
-    for indice in range(2 ** len(prendas)):
-        encima = [p.name for i, p in enumerate(prendas) if indice >> i & 1]
-        nombre = "_".join(["bajo", *encima]) if encima else "piel"
-        material = material_simple(nombre, imagen_piel, transparente=False)
-        assert material.name == nombre  # la app las reconoce por este nombre
-        cuerpo.data.materials.append(material)
-    giro = cuerpo.matrix_world.to_3x3()
-    for poligono in cuerpo.data.polygons:
-        if any(g.group in tapado for v in poligono.vertices for g in cuerpo.data.vertices[v].groups):
-            hacia_fuera = (giro @ poligono.normal).normalized()
-            puntos = [cuerpo.matrix_world @ p for p in (poligono.center, *(cuerpo.data.vertices[v].co for v in poligono.vertices))]
-            # Una tela tapa la cara si está delante de toda ella; se mira desde un poco dentro, por si la piel
-            # la atraviesa. La cara que solo queda tapada a medias, en el borde de una prenda, se deja a la
-            # vista: escondida abriría un agujero junto al borde.
-            # shortcut: 8 cm de alcance, medido para estos conjuntos; una prenda más holgada no taparía nada
-            encima = [all(tela.ray_cast(p - hacia_fuera * 0.02, hacia_fuera, 0.1)[0] is not None for p in puntos) for tela in telas]
-            poligono.material_index = sum(tapa << i for i, tapa in enumerate(encima))
-    imagen_pelo = next(n.image for m in pelo.data.materials for n in m.node_tree.nodes if n.type == "TEX_IMAGE" and n.image)
-    poner_material(pelo, material_simple("pelo", imagen_pelo))
-    for objeto in mallas:
-        for modificador in list(objeto.modifiers):
-            objeto.modifiers.remove(modificador)
-        for poligono in objeto.data.polygons:
-            poligono.use_smooth = True
-
-    os.makedirs(SALIDA, exist_ok=True)
-    destino = os.path.join(SALIDA, archivo + ".glb")
-    bpy.ops.object.select_all(action="DESELECT")
-    for objeto in mallas:
+    for objeto in objetos:
         objeto.select_set(True)
     bpy.ops.export_scene.gltf(
         filepath=destino,
@@ -265,4 +235,89 @@ for archivo, (genero, piel, peinado, zapatos, conjunto, nombre_vestido) in CUERP
         export_image_format="WEBP",
         export_yup=True,
     )
-    print("CUERPO_OK", archivo, *(len(o.data.vertices) for o in mallas), os.path.getsize(destino), "bytes")
+
+
+for archivo, (genero, piel, peinado, zapatos) in CUERPOS.items():
+    catalogo = CATALOGO[archivo]
+    nombres = [prenda for prenda, _, _ in catalogo]
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    mallas = crear(genero, peinado, zapatos, nombres, {})
+    cuerpo, pelo, *cara, calzado = mallas[:ROPA]
+    prendas = mallas[ROPA:]
+    cuerpo.name, pelo.name, calzado.name = "cuerpo", "pelo", "zapatos"
+    poner_material(calzado, material_simple("zapatos", textura(os.path.join(RECURSOS, "clothes", zapatos), LADO_ZAPATOS), transparente=False))
+    for malla, (_, nombre, _, ruta) in zip(cara, CARA):
+        malla.name = nombre
+        poner_material(malla, material_simple(nombre, bpy.data.images.load(os.path.join(RECURSOS, ruta))))
+    for malla, nombre in zip(prendas, nombres):
+        malla.name = nombre
+        malla.data.materials.clear()  # la app les pone la tela de la foto
+    for objeto in mallas:
+        objeto.shape_key_add(name="Basis")
+
+    for nombre, cambios in FORMAS.items():
+        variantes = crear(genero, peinado, zapatos, nombres, cambios)
+        for base, variante in zip(mallas, variantes):
+            copiar_forma(base, variante, nombre)
+        for variante in reversed(variantes):
+            bpy.data.objects.remove(variante)
+
+    # La malla trae geometría auxiliar (guías para la ropa y las articulaciones) que no es cuerpo. Los
+    # pies dentro de los zapatos también sobran: los zapatos van siempre puestos.
+    indice_cuerpo = cuerpo.vertex_groups["body"].index
+    indice_pies = cuerpo.vertex_groups["Delete." + zapatos].index
+    malla = bmesh.new()
+    malla.from_mesh(cuerpo.data)
+    capa = malla.verts.layers.deform.verify()
+    bmesh.ops.delete(malla, geom=[v for v in malla.verts if indice_cuerpo not in v[capa] or indice_pies in v[capa]], context="VERTS")
+    malla.to_mesh(cuerpo.data)
+    malla.free()
+
+    poner_material(cuerpo, material_simple("piel", textura(os.path.join(RECURSOS, "skins", piel), LADO_PIEL), transparente=False))
+    imagen_pelo = next(n.image for m in pelo.data.materials for n in m.node_tree.nodes if n.type == "TEX_IMAGE" and n.image)
+    poner_material(pelo, material_simple("pelo", imagen_pelo))
+
+    # Cada prenda trae la lista de vértices del cuerpo que tapa. De esas caras, las que la tela tapa del
+    # todo van a su máscara, para que la app no pinte esa piel mientras la llevas: si no, asoma por la
+    # tela ceñida. Se mira si la tela está delante de toda la cara, desde un poco dentro por si la piel
+    # la atraviesa. La cara que solo queda tapada a medias, en el borde de una prenda, se deja a la
+    # vista: escondida abriría un agujero junto al borde.
+    giro = cuerpo.matrix_world.to_3x3()
+    carpeta = os.path.join(SALIDA, archivo)
+    os.makedirs(carpeta, exist_ok=True)
+    for prenda, nombre in zip(prendas, nombres):
+        # Algunas prendas no traen esa lista: entonces se miran todas las caras
+        grupo = cuerpo.vertex_groups.get("Delete." + nombre)
+        tela = BVHTree.FromPolygons([prenda.matrix_world @ v.co for v in prenda.data.vertices], [tuple(c.vertices) for c in prenda.data.polygons])
+
+        def tapa(punto, hacia_fuera):
+            # La tela tiene que mirar hacia el mismo lado que la piel: así la del torso no cuenta como encima
+            # del interior del brazo, que está a pocos centímetros pero mirándola de frente
+            # shortcut: 8 cm de alcance; la piel bajo una prenda más holgada se deja pintada (queda dentro de la tela)
+            _, normal, _, _ = tela.ray_cast(punto - hacia_fuera * 0.02, hacia_fuera, 0.1)
+            return normal is not None and normal.dot(hacia_fuera) > 0.5
+
+        tapadas = []
+        for poligono in cuerpo.data.polygons:
+            if grupo and not any(g.group == grupo.index for v in poligono.vertices for g in cuerpo.data.vertices[v].groups):
+                continue
+            hacia_fuera = (giro @ poligono.normal).normalized()
+            puntos = [cuerpo.matrix_world @ p for p in (poligono.center, *(cuerpo.data.vertices[v].co for v in poligono.vertices))]
+            if all(tapa(p, hacia_fuera) for p in puntos):
+                tapadas.append(poligono)
+        assert tapadas, nombre  # toda prenda tapa algo de piel: si no, no se ha ajustado al cuerpo
+        guardar_mascara(mascara(cuerpo, tapadas), os.path.join(carpeta, nombre + ".png"))
+
+    for objeto in mallas:
+        for modificador in list(objeto.modifiers):
+            objeto.modifiers.remove(modificador)
+        for poligono in objeto.data.polygons:
+            poligono.use_smooth = True
+
+    exportar([cuerpo, pelo, *cara, calzado], os.path.join(SALIDA, archivo + ".glb"))
+    for prenda, nombre in zip(prendas, nombres):
+        exportar([prenda], os.path.join(carpeta, nombre + ".glb"))
+    with open(os.path.join(SALIDA, archivo + ".json"), "w", encoding="utf-8") as lista:
+        json.dump([{"id": prenda, "hueco": hueco, "nombre": nombre} for prenda, hueco, nombre in catalogo], lista, ensure_ascii=False, indent=1)
+    pesos = {nombre: os.path.getsize(os.path.join(carpeta, nombre + ".glb")) // 1000 for nombre in nombres}
+    print("CUERPO_OK", archivo, os.path.getsize(os.path.join(SALIDA, archivo + ".glb")) // 1000, "KB; prendas (KB):", pesos)

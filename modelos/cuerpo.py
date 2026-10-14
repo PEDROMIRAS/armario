@@ -23,7 +23,7 @@ SALIDA = os.path.join(os.getcwd(), "public", "modelos")
 # El conjunto tiene que venir en dos piezas sueltas, la de arriba y el pantalón.
 # El vestido es del paquete Dress 01 (CC0); se descomprime en la misma carpeta de recursos.
 CUERPOS = {
-    "mujer": (0.0, "long01", "female_casualsuit01", "wdg_mycenaean_tunic"),
+    "mujer": (0.0, "long01", "female_casualsuit01", "toigo_halter_dress_midi"),
     "hombre": (1.0, "short02", "male_casualsuit04", None),
 }
 # MakeHuman crea el cuerpo con los brazos abiertos; se bajan este ángulo para una postura de pie natural

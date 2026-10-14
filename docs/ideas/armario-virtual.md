@@ -33,8 +33,8 @@ cada prenda se pone como tela de una prenda 3D del catálogo de MakeHuman sobre 
 2026, por la noche). El freno de hoy es que cada forma de prenda es una malla nueva hecha en el
 sobremesa, y el catálogo no se acaba nunca. Se sustituye por **una prenda larga por familia que se
 recorta con controles**: cada vértice guarda lo lejos que está del hombro y de la cintura, y el
-shader esconde la tela a partir del valor elegido. De un vestido largo con manga larga salen el
-mini, el midi y el largo, con o sin manga; si además se corta por arriba, quizá una falda. El
+shader esconde la tela a partir del valor elegido. De un vestido midi salen el
+mini, el de rodilla y el midi (el paquete no trae ninguno largo con manga larga); si además se corta por arriba, quizá una falda. El
 catálogo pasa a ser números guardados con cada prenda, no mallas.
 
 Con eso, el maniquí se acerca a quien lo usa por lo barato: **tono de piel y color de pelo**.
@@ -98,10 +98,11 @@ Hecho el 14 de octubre de 2026:
 Siguiente, por orden:
 
 1. ~~El vestido 3D~~ ([plan](../planes/2026-10-14-vestido-3d.md)). Hecho el 14 de octubre de 2026,
-   falta verlo en el navegador. El paquete Dress 01 no trae ningún vestido largo y con manga larga a
-   la vez; se eligió la túnica `wdg_mycenaean_tunic`: recta, por debajo de la rodilla y con manga
-   corta. La tijera podrá acortar el bajo y quitar la manga, pero no alargarlos.
-2. La tijera en el vestido: largo de bajo y largo de manga, con la piel respetando el corte.
+   El paquete Dress 01 no trae ningún vestido largo y con manga larga a la vez. Primero se probó la
+   túnica `wdg_mycenaean_tunic`, que tiene manga, pero en el navegador parecía un camisón; se quedó
+   la halter midi, entallada y sin mangas. La tijera solo recortará el bajo (midi, rodilla, mini):
+   la manga queda fuera.
+2. La tijera en el vestido: el largo del bajo, con la piel respetando el corte.
 3. Los valores de corte guardados con cada prenda del armario.
 4. Tono de piel y color de pelo.
 5. La habitación fija, con perchas y el maniquí como espejo (unas 15 horas como máximo).

@@ -27,13 +27,13 @@ Una sola pantalla (`src/App.jsx`):
   camiseta o pantalón (`src/textura.js`). No se usa la foto entera: su forma nunca coincide.
 - **Armario y conjuntos**: se guardan en el móvil, en IndexedDB (`src/almacen.js`).
 - **Huecos** (`src/huecos.js`): arriba, abajo y vestido. Un botón solo aparece si el `.glb` trae su
-  malla. El vestido (una túnica midi de manga corta del paquete Dress 01) solo lo trae `mujer.glb`.
+  malla. El vestido (halter midi, sin mangas, del paquete Dress 01) solo lo trae `mujer.glb`.
 
 ## Siguiente
 
 El vestido 3D ya está ([plan](docs/planes/2026-10-14-vestido-3d.md)); falta verlo en el
-navegador con una foto real. Después, **la tijera** en vez de más mallas: el shader recorta el bajo y la manga, y así salen el
-mini, el midi y el largo de una sola malla. Luego tono de piel y pelo, la habitación fija (armario
+navegador con una foto real. Después, **la tijera** en vez de más mallas: el shader recorta el bajo, y así salen el
+mini, el de rodilla y el midi de una sola malla. Luego tono de piel y pelo, la habitación fija (armario
 con perchas, unas 15 h como máximo) y la prueba con 3 amigas. Orden y motivos en
 [la idea](docs/ideas/armario-virtual.md). El público son mujeres de 20 a 35 años que no saben qué
 ponerse para una cena o un evento, y casi todo lo que prueban son vestidos.

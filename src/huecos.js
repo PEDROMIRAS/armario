@@ -4,7 +4,7 @@
 export const HUECOS = [
     { id: 'arriba', nombre: 'Parte de arriba', malla: 'camiseta', referencia: [0.75, 0.95], quita: ['vestido'] }, // el bajo
     { id: 'abajo', nombre: 'Parte de abajo', malla: 'pantalon', referencia: [0.02, 0.12], quita: ['vestido'] }, // la cintura
-    { id: 'vestido', nombre: 'Vestido', malla: 'vestido', referencia: [0.36, 0.44], quita: ['arriba', 'abajo'] }, // la cintura, por debajo de las mangas
+    { id: 'vestido', nombre: 'Vestido', malla: 'vestido', referencia: [0.28, 0.36], quita: ['arriba', 'abajo'] }, // sobre la cintura
 ];
 
 /** Las prendas puestas tras poner `prenda` en `hueco`: sustituye a la que hubiera y quita las que choquen. */

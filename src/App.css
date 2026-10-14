@@ -24,10 +24,56 @@ h1 {
     min-height: 1.5em;
 }
 
-.botones {
-    display: flex;
-    gap: 0.75rem;
+.anadir {
+    position: relative;
     width: 100%;
+}
+
+.anadir summary {
+    display: block;
+    list-style: none; /* sin el triángulo del navegador */
+}
+
+.anadir summary::-webkit-details-marker {
+    display: none;
+}
+
+.anadir summary::after {
+    content: ' ▾';
+}
+
+.anadir[open] summary::after {
+    content: ' ▴';
+}
+
+.tipos {
+    position: absolute;
+    z-index: 1;
+    top: calc(100% + 0.25rem);
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 2px solid var(--silueta);
+    border-radius: 0.75rem;
+    background: var(--fondo);
+}
+
+.tipos label {
+    padding: 0.85rem 1rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
+
+.tipos label + label {
+    border-top: 1px solid var(--silueta);
+}
+
+.tipos label:hover,
+.tipos label:focus-within {
+    background: var(--silueta);
 }
 
 .boton {
@@ -40,6 +86,7 @@ h1 {
     cursor: pointer;
 }
 
+.boton:focus-visible,
 .boton:focus-within {
     outline: 3px solid var(--texto);
     outline-offset: 2px;
@@ -51,7 +98,7 @@ h1 {
 }
 
 /* Oculto a la vista pero no al teclado ni al lector de pantalla */
-.boton input {
+.tipos input {
     position: absolute;
     width: 1px;
     height: 1px;

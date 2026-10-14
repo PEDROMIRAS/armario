@@ -15,6 +15,10 @@ const CUERPOS = [
 ];
 // Las prendas que trae cada archivo, como mallas con este nombre (modelos/cuerpo.py)
 const PRENDAS = HUECOS.map((hueco) => hueco.malla);
+// Tus medidas se eligen al entrar la primera vez y se recuerdan entre visitas
+const leerMedidas = () => {
+    try { return JSON.parse(localStorage.getItem('medidas')); } catch { return null; }
+};
 const ALTURA = { min: 145, max: 205 }; // cm: las formas extremas del modelo van mucho más allá de una persona
 
 /**
@@ -59,11 +63,14 @@ export default function Cuerpo({ prendas, alCargar }) {
     const lienzo = useRef(null);
     const escena = useRef(null);
     const pintar = useRef(() => {});
-    const [sexo, setSexo] = useState('mujer');
+    const [guardadas] = useState(leerMedidas);
+    // Sin medidas guardadas se empieza ajustando el maniquí
+    const [ajustando, setAjustando] = useState(!guardadas);
+    const [sexo, setSexo] = useState(guardadas?.sexo ?? 'mujer');
     // Lo cargado: sus mallas y cuánto mide, en cm, el cuerpo base y cuánto le suman o restan las formas
     const [modelo, setModelo] = useState(null);
-    const [altura, setAltura] = useState(null); // null = la del cuerpo base
-    const [complexion, setComplexion] = useState(0);
+    const [altura, setAltura] = useState(guardadas?.altura ?? null); // null = la del cuerpo base
+    const [complexion, setComplexion] = useState(guardadas?.complexion ?? 0);
     const [estado, setEstado] = useState('');
 
     useEffect(() => {
@@ -196,6 +203,11 @@ export default function Cuerpo({ prendas, alCargar }) {
 
     const alturaActual = altura ?? modelo?.base ?? 166;
 
+    const terminar = () => {
+        try { localStorage.setItem('medidas', JSON.stringify({ sexo, altura: alturaActual, complexion })); } catch { /* sin almacenamiento: se vuelven a pedir */ }
+        setAjustando(false);
+    };
+
     useEffect(() => {
         if (!modelo) return;
         const influencias = formas(alturaActual, complexion, modelo);
@@ -238,21 +250,33 @@ export default function Cuerpo({ prendas, alCargar }) {
 
     return (
         <section className="cuerpo" aria-label="Tu maniquí">
-            <div className="opciones" role="group" aria-label="Cuerpo base">
-                {CUERPOS.map(({ id, nombre }) => (
-                    <button key={id} aria-pressed={sexo === id} onClick={() => { setSexo(id); setAltura(null); }}>{nombre}</button>
-                ))}
-            </div>
+            {ajustando && (
+                <>
+                    <p className="ajuste">Primero, ajusta el maniquí a ti.</p>
+                    <div className="opciones" role="group" aria-label="Cuerpo base">
+                        {CUERPOS.map(({ id, nombre }) => (
+                            <button key={id} aria-pressed={sexo === id} onClick={() => { setSexo(id); setAltura(null); }}>{nombre}</button>
+                        ))}
+                    </div>
+                </>
+            )}
             <canvas ref={lienzo} aria-label="Maniquí en 3D. Arrastra para girarlo." role="img" />
             <p role="status" className="estado">{estado}</p>
-            <label>
-                Altura: {alturaActual} cm
-                <input type="range" min={ALTURA.min} max={ALTURA.max} step="1" value={alturaActual} onChange={(e) => setAltura(Number(e.target.value))} />
-            </label>
-            <label>
-                Complexión
-                <input type="range" min="-1" max="1" step="0.01" value={complexion} onChange={(e) => setComplexion(Number(e.target.value))} />
-            </label>
+            {ajustando ? (
+                <>
+                    <label>
+                        Altura: {alturaActual} cm
+                        <input type="range" min={ALTURA.min} max={ALTURA.max} step="1" value={alturaActual} onChange={(e) => setAltura(Number(e.target.value))} />
+                    </label>
+                    <label>
+                        Complexión
+                        <input type="range" min="-1" max="1" step="0.01" value={complexion} onChange={(e) => setComplexion(Number(e.target.value))} />
+                    </label>
+                    <button className="listo" onClick={terminar}>Listo</button>
+                </>
+            ) : (
+                <button className="medidas" onClick={() => setAjustando(true)}>Cambiar tus medidas</button>
+            )}
         </section>
     );
 }

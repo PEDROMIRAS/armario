@@ -47,3 +47,22 @@
     font-weight: 600;
 }
 
+
+.ajuste {
+    margin: 0;
+    font-weight: 600;
+}
+
+.cuerpo .listo {
+    width: 100%;
+    padding: 0.9rem;
+    background: var(--acento);
+    color: #fff;
+    font-weight: 600;
+}
+
+/* Discreto: las medidas se cambian pocas veces */
+.cuerpo .medidas {
+    padding: 0.4rem 0.9rem;
+    font-size: 0.9rem;
+}

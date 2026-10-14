@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { quitarFondo } from './recorte.js';
 import { HUECOS, vestir } from './huecos.js';
 import * as almacen from './almacen.js';
@@ -28,6 +28,7 @@ export default function App() {
     const [ocasion, setOcasion] = useState('');
     const [estado, setEstado] = useState('');
     const [ocupado, setOcupado] = useState(false);
+    const menu = useRef(null);
     // Las mallas de prenda que trae el cuerpo cargado: un hueco sin su malla no se ofrece
     const [mallas, setMallas] = useState([]);
     const huecos = HUECOS.filter((hueco) => mallas.includes(hueco.malla));
@@ -121,19 +122,25 @@ export default function App() {
 
             <p role="status" className="estado">{estado}</p>
 
-            <div className="botones">
-                {huecos.map((hueco) => (
-                    <label key={hueco.id} className={ocupado ? 'boton inactivo' : 'boton'}>
-                        {hueco.nombre}
-                        <input
-                            type="file"
-                            accept="image/*"
-                            disabled={ocupado}
-                            onChange={(e) => { poner(hueco, e.target.files[0]); e.target.value = ''; }}
-                        />
-                    </label>
-                ))}
-            </div>
+            {/* Un solo botón que despliega los tipos de prenda; cada tipo abre la cámara o la galería */}
+            <details className="anadir" ref={menu}>
+                <summary className={ocupado ? 'boton inactivo' : 'boton'} onClick={(e) => { if (ocupado) e.preventDefault(); }}>
+                    {ocupado ? 'Preparando la prenda…' : 'Añadir prenda'}
+                </summary>
+                <div className="tipos">
+                    {huecos.map((hueco) => (
+                        <label key={hueco.id}>
+                            {hueco.nombre}
+                            <input
+                                type="file"
+                                accept="image/*"
+                                disabled={ocupado}
+                                onChange={(e) => { menu.current.open = false; poner(hueco, e.target.files[0]); e.target.value = ''; }}
+                            />
+                        </label>
+                    ))}
+                </div>
+            </details>
 
             {llevasAlgo && (
                 <form className="ocasion" onSubmit={guardarConjunto}>

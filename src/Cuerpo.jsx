@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { formas, extremoY } from './formas.js';
 import { HUECOS } from './huecos.js';
-import { trozoDeTela, quitarLuz, envoltura } from './textura.js';
+import { trozoDeTela, quitarLuz, envoltura, relieve } from './textura.js';
 import { crearHabitacion } from './habitacion.js';
 import './Cuerpo.css';
 
@@ -23,8 +24,8 @@ const ALTURA = { min: 145, max: 205 }; // cm: las formas extremas del modelo van
 
 /**
  * La tela de la prenda: un trozo limpio y uniforme de su foto, sin la luz de la foto, que se repite en
- * espejo para que no se noten los cortes entre copias. `proporcion` es su lado dividido por el ancho del
- * cuerpo de la prenda.
+ * espejo para que no se noten los cortes entre copias, y su relieve. `proporcion` es su lado dividido por
+ * el ancho del cuerpo de la prenda.
  */
 const tela = async (prenda) => {
     const foto = await createImageBitmap(prenda.imagen);
@@ -48,7 +49,10 @@ const tela = async (prenda) => {
     mapa.colorSpace = THREE.SRGBColorSpace;
     mapa.wrapS = mapa.wrapT = THREE.MirroredRepeatWrapping;
     mapa.flipY = false; // v crece hacia abajo, como en la foto: los estampados no salen del revés
-    return { mapa, proporcion };
+    const bultos = new THREE.DataTexture(relieve(pixeles.data, trozo.lado), trozo.lado, trozo.lado);
+    bultos.wrapS = bultos.wrapT = THREE.MirroredRepeatWrapping;
+    bultos.needsUpdate = true;
+    return { mapa, bultos, proporcion };
 };
 
 /**
@@ -91,14 +95,34 @@ export default function Cuerpo({ prendas, alCargar }) {
 
         // La habitación no cambia con el cuerpo
         const habitacion = crearHabitacion();
+        habitacion.traverse((objeto) => { objeto.receiveShadow = true; });
         escena.current.add(habitacion);
-        // La luz de una habitación por todos lados, que marca los pliegues, y un foco que da volumen
+        // La luz llega por todos lados desde una foto 360° de una habitación real (Poly Haven, CC0), sin
+        // tinte para no cambiar el color de la ropa. Mientras se descarga, una habitación de three.js.
         const generador = new THREE.PMREMGenerator(renderer);
-        const entorno = generador.fromScene(new RoomEnvironment(), 0.04).texture;
-        generador.dispose();
+        let entorno = generador.fromScene(new RoomEnvironment(), 0.04).texture;
         escena.current.environment = entorno;
+        let cerrado = false;
+        new HDRLoader().load(`${import.meta.env.BASE_URL}luz.hdr`, (foto) => {
+            if (!cerrado) {
+                entorno.dispose();
+                entorno = generador.fromEquirectangular(foto).texture;
+                escena.current.environment = entorno;
+                pintar.current();
+            }
+            foto.dispose();
+            generador.dispose();
+        }, undefined, (error) => { console.error(error); generador.dispose(); });
+        // Un foco que da volumen y proyecta la sombra del cuerpo en el suelo y de la ropa sobre sí misma
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         const foco = new THREE.DirectionalLight(0xffffff, 1.2);
         foco.position.set(1.5, 3, 2.5);
+        foco.castShadow = true;
+        foco.shadow.mapSize.set(1024, 1024);
+        Object.assign(foco.shadow.camera, { left: -1.6, right: 1.6, top: 1.6, bottom: -1.6, near: 1, far: 8 });
+        foco.shadow.bias = -0.0005;
+        foco.shadow.normalBias = 0.02; // sin esto, las formas del cuerpo se manchan de rayas de sombra
         escena.current.add(foco);
 
         // Sombra difusa bajo los pies: sin ella el cuerpo parece flotar
@@ -143,6 +167,7 @@ export default function Cuerpo({ prendas, alCargar }) {
         observador.observe(canvas);
 
         return () => {
+            cerrado = true;
             observador.disconnect();
             canvas.removeEventListener('pointerdown', empezar);
             canvas.removeEventListener('pointermove', mover);
@@ -173,17 +198,25 @@ export default function Cuerpo({ prendas, alCargar }) {
                 gltf.scene.traverse((objeto) => {
                     if (!objeto.isMesh) return;
                     mallas.push(objeto);
+                    objeto.castShadow = objeto.receiveShadow = true;
                     // El cuerpo llega en varias piezas, que se distinguen por el nombre de su material: "piel" es
                     // la que nunca se tapa, y "bajo_camiseta" o "bajo_camiseta_pantalon", la que queda bajo esas prendas
                     const pieza = objeto.material.name;
                     if (pieza === 'piel' || pieza.startsWith('bajo_')) {
-                        // La piel trae su textura; mate, para que no brille como el plástico
-                        objeto.material.roughness = 0.75;
+                        // La piel trae su textura. Con un brillo suave y rosado en los bordes, como la piel con luz
+                        // de lado, en vez del brillo de plástico
+                        const textura = objeto.material.map;
+                        objeto.material.dispose();
+                        objeto.material = new THREE.MeshPhysicalMaterial({ map: textura, roughness: 0.6, sheen: 0.4, sheenRoughness: 0.5, sheenColor: 0xffc8b0 });
                         objeto.userData.bajo = pieza.split('_').slice(1);
                         if (pieza === 'piel') cuerpo = objeto;
                     } else if (PRENDAS.includes(objeto.name)) {
-                        // La tela es una sola capa: por las mangas y el cuello se ve su cara interior
-                        objeto.material = new THREE.MeshStandardMaterial({ roughness: 0.9, side: THREE.DoubleSide });
+                        // Tela: mate, con el brillo suave de los tejidos en los bordes (sheen). Es una sola capa: por las
+                        // mangas y el cuello se ve su cara interior
+                        objeto.material = new THREE.MeshPhysicalMaterial({
+                            roughness: 0.85, sheen: 1, sheenRoughness: 0.6, sheenColor: 0x404040,
+                            normalScale: new THREE.Vector2(0.6, 0.6), side: THREE.DoubleSide,
+                        });
                         objeto.userData.prenda = objeto.name;
                     } else {
                         // El pelo son láminas con textura: se recorta por su transparencia y se ve por las dos caras
@@ -218,6 +251,7 @@ export default function Cuerpo({ prendas, alCargar }) {
         for (const malla of modelo.mallas) {
             malla.geometry.dispose();
             malla.material.map?.dispose();
+            malla.material.normalMap?.dispose();
             malla.material.dispose();
         }
     }, [modelo]);
@@ -251,12 +285,14 @@ export default function Cuerpo({ prendas, alCargar }) {
                 const prenda = prendas[malla.userData.prenda];
                 // Solo se rehace la textura si cambia la prenda de esa malla (el objeto se crea de nuevo en cada cambio: vale el id)
                 if (!prenda || malla.userData.foto === prenda.id) continue;
-                const { mapa, proporcion } = await tela(prenda);
-                if (cancelado) { mapa.dispose(); return; }
+                const { mapa, bultos, proporcion } = await tela(prenda);
+                if (cancelado) { mapa.dispose(); bultos.dispose(); return; }
                 const uv = envoltura(malla.geometry.attributes.position.array, prenda.referencia, proporcion);
                 malla.geometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
                 malla.material.map?.dispose();
+                malla.material.normalMap?.dispose();
                 malla.material.map = mapa;
+                malla.material.normalMap = bultos;
                 malla.material.needsUpdate = true;
                 malla.userData.foto = prenda.id;
             }

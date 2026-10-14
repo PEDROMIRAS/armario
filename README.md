@@ -64,6 +64,12 @@ alfombra y un armario abierto), hecho con piezas de three.js en
 [src/habitacion.js](src/habitacion.js): no se descarga nada y se edita sin Blender. La lámpara da
 luz cálida a su alrededor, pero no llega al maniquí, para no cambiar el color de la ropa.
 
+La luz sale de una foto 360° de una habitación real, `public/luz.hdr` (430 KB): «Poly Haven
+Studio», de [Poly Haven](https://polyhaven.com/a/poly_haven_studio) (CC0), reducida a 512 px y sin
+su tinte, para que la ropa se vea de su color. Un foco proyecta las sombras del cuerpo en el suelo y
+de la ropa sobre sí misma. La tela lleva el brillo suave de los tejidos y el relieve de la trama,
+sacado de la propia foto.
+
 La cámara se queda quieta delante; al arrastrar gira el maniquí, como al darte la vuelta delante
 de un espejo.
 

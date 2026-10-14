@@ -129,3 +129,29 @@ export function envoltura(posiciones, [desde, hasta], proporcion) {
     }
     return uv;
 }
+
+/**
+ * El relieve del tejido sacado de la propia foto, como mapa de normales: lo claro se toma por alto y lo
+ * oscuro por hondo. Así la trama, el punto o las rayas reciben la luz como tela y no parecen pintados.
+ * Va sobre el trozo ya sin la luz de la foto, para que un pliegue no se tome por relieve.
+ * @param {Uint8ClampedArray} pixeles - RGBA del trozo, de `lado` x `lado`.
+ * @param {number} fuerza - Cuánto se inclina la normal por cada nivel de luminancia (0-255).
+ * @returns {Uint8Array} RGBA del mapa de normales: (128, 128, 255) es plano.
+ */
+export function relieve(pixeles, lado, fuerza = 0.02) {
+    const alto = (x, y) => luminancia(pixeles, (Math.min(lado - 1, Math.max(0, y)) * lado + Math.min(lado - 1, Math.max(0, x))) * 4);
+    const normales = new Uint8Array(lado * lado * 4);
+    for (let y = 0; y < lado; y++) {
+        for (let x = 0; x < lado; x++) {
+            const nx = -(alto(x + 1, y) - alto(x - 1, y)) * fuerza;
+            const ny = -(alto(x, y + 1) - alto(x, y - 1)) * fuerza;
+            const largo = Math.hypot(nx, ny, 1);
+            const i = (y * lado + x) * 4;
+            normales[i] = Math.round((nx / largo * 0.5 + 0.5) * 255);
+            normales[i + 1] = Math.round((ny / largo * 0.5 + 0.5) * 255);
+            normales[i + 2] = Math.round((1 / largo * 0.5 + 0.5) * 255);
+            normales[i + 3] = 255;
+        }
+    }
+    return normales;
+}

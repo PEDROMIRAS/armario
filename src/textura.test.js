@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { trozoDeTela, quitarLuz, envoltura } from './textura.js';
+import { trozoDeTela, quitarLuz, envoltura, relieve } from './textura.js';
 
 // Imagen RGBA de ancho x alto, opaca donde `opaco(x, y)`
 const imagen = (ancho, alto, opaco) => {
@@ -54,4 +54,16 @@ test('la tela envuelve la prenda a su tamaño real', () => {
     const uv = [...envoltura(posiciones, [0, 1], 0.5)].map((x) => Math.round(x * 100) / 100);
     // De arriba abajo hay 1 m: 5 trozos. Del frente a cada costado, un cuarto de vuelta (0,31 m): 1,57 trozos.
     assert.deepEqual(uv, [0, 0, 0, 5, 1.57, 2.5, 1.57, 2.5, 3.14, 2.5]);
+});
+
+test('el relieve es plano en una tela lisa y se inclina hacia lo oscuro en una rampa', () => {
+    const lado = 4, liso = new Uint8ClampedArray(lado * lado * 4).fill(120);
+    const plano = relieve(liso, lado);
+    for (let i = 0; i < plano.length; i += 4) assert.deepEqual([...plano.slice(i, i + 3)], [128, 128, 255]);
+    // Más claro hacia la derecha: la superficie sube hacia allí y su normal mira a la izquierda (x < 128)
+    const rampa = new Uint8ClampedArray(lado * lado * 4);
+    for (let y = 0; y < lado; y++) for (let x = 0; x < lado; x++) rampa.fill(60 * x, (y * lado + x) * 4, (y * lado + x) * 4 + 3);
+    const inclinado = relieve(rampa, lado);
+    const centro = (1 * lado + 1) * 4;
+    assert.ok(inclinado[centro] < 128 && inclinado[centro + 1] === 128 && inclinado[centro + 2] < 255);
 });

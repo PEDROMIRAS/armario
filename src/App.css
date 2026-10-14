@@ -147,3 +147,62 @@ h1 {
 .enlace-cuerpo {
     color: var(--texto-suave);
 }
+
+.ocasion {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    width: 100%;
+    text-align: left;
+    font-weight: 600;
+}
+
+.ocasion div {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.ocasion input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.7rem 0.75rem;
+    border: 2px solid var(--silueta);
+    border-radius: 0.75rem;
+    background: var(--fondo);
+    color: var(--texto);
+    font: inherit;
+    font-weight: 400;
+}
+
+.ocasion .boton {
+    flex: none;
+    padding: 0.7rem 1rem;
+    border: 0;
+    font: inherit;
+    font-weight: 600;
+}
+
+.conjunto {
+    max-width: 12rem;
+    padding: 0.6rem 2rem 0.6rem 0.9rem;
+    border: 2px solid transparent;
+    border-radius: 0.75rem;
+    background: var(--silueta);
+    color: var(--texto);
+    font: inherit;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+
+.conjunto[aria-pressed='true'] {
+    border-color: var(--acento);
+}
+
+/* La × del conjunto, centrada en vertical sobre su botón */
+.conjuntos .tirar {
+    top: 50%;
+    transform: translateY(-50%);
+    right: 0.35rem;
+}

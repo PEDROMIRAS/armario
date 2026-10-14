@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { quitarFondo } from './recorte.js';
 import { HUECOS, vestir } from './huecos.js';
-import { todas, guardar, borrar } from './almacen.js';
+import * as almacen from './almacen.js';
 import './App.css';
 
 // Lo que llevas puesto (hueco -> id de la prenda) se recuerda entre visitas
@@ -9,17 +9,31 @@ const leerPuestas = () => {
     try { return JSON.parse(localStorage.getItem('puestas')) ?? {}; } catch { return {}; }
 };
 const conUrl = (prenda) => ({ ...prenda, url: URL.createObjectURL(prenda.imagen) });
+// Mismas prendas en los mismos huecos
+const iguales = (a, b) => Object.keys(a).length === Object.keys(b).length && Object.keys(a).every((hueco) => a[hueco] === b[hueco]);
+
+/** Guarda y devuelve el id. Sin almacenamiento (p. ej. navegación privada) se puede probar igual, pero no queda guardado. */
+const guardarEn = (lista, elemento) => lista.guardar(elemento).catch((error) => {
+    console.error(error);
+    return crypto.randomUUID();
+});
 
 export default function App() {
     const [armario, setArmario] = useState([]);
     const [puestas, setPuestas] = useState(leerPuestas);
+    const [conjuntos, setConjuntos] = useState([]);
+    const [ocasion, setOcasion] = useState('');
     const [estado, setEstado] = useState('');
     const [ocupado, setOcupado] = useState(false);
 
     useEffect(() => {
         let cancelado = false;
-        todas().then(
-            (guardadas) => { if (!cancelado) setArmario(guardadas.map(conUrl)); },
+        Promise.all([almacen.prendas.todas(), almacen.conjuntos.todas()]).then(
+            ([guardadas, ocasiones]) => {
+                if (cancelado) return;
+                setArmario(guardadas.map(conUrl));
+                setConjuntos(ocasiones);
+            },
             (error) => { console.error(error); setEstado('No se ha podido abrir tu armario guardado.'); }
         );
         return () => { cancelado = true; };
@@ -34,14 +48,7 @@ export default function App() {
         setOcupado(true);
         try {
             const prenda = { hueco: hueco.id, ...(await quitarFondo(foto, setEstado, hueco.referencia)) };
-            let id;
-            try {
-                id = await guardar(prenda);
-            } catch (error) {
-                // Sin almacenamiento (p. ej. navegación privada) se puede probar igual, pero no se guarda
-                console.error(error);
-                id = crypto.randomUUID();
-            }
+            const id = await guardarEn(almacen.prendas, prenda);
             setArmario((antes) => [...antes, conUrl({ ...prenda, id })]);
             setPuestas((antes) => vestir(antes, hueco, id));
             setEstado('');
@@ -62,11 +69,32 @@ export default function App() {
 
     const tirar = (prenda) => {
         if (!confirm('¿Borrar esta prenda de tu armario?')) return;
-        borrar(prenda.id).catch(console.error);
+        almacen.prendas.borrar(prenda.id).catch(console.error);
         URL.revokeObjectURL(prenda.url);
         setArmario((antes) => antes.filter((p) => p !== prenda));
         setPuestas((antes) => Object.fromEntries(Object.entries(antes).filter(([, id]) => id !== prenda.id)));
     };
+
+    const guardarConjunto = async (evento) => {
+        evento.preventDefault();
+        const conjunto = { nombre: ocasion.trim(), puestas };
+        const id = await guardarEn(almacen.conjuntos, conjunto);
+        setConjuntos((antes) => [...antes, { ...conjunto, id }]);
+        setOcasion('');
+    };
+
+    // Solo las prendas que sigan en el armario: alguna puede haberse borrado después
+    const ponerConjunto = (conjunto) => setPuestas(
+        Object.fromEntries(Object.entries(conjunto.puestas).filter(([, id]) => armario.some((p) => p.id === id)))
+    );
+
+    const tirarConjunto = (conjunto) => {
+        if (!confirm(`¿Borrar el conjunto «${conjunto.nombre}»?`)) return;
+        almacen.conjuntos.borrar(conjunto.id).catch(console.error);
+        setConjuntos((antes) => antes.filter((c) => c !== conjunto));
+    };
+
+    const llevasAlgo = HUECOS.some(({ id }) => armario.some((p) => p.id === puestas[id]));
 
     return (
         <main>
@@ -116,6 +144,32 @@ export default function App() {
                     </label>
                 ))}
             </div>
+
+            {llevasAlgo && (
+                <form className="ocasion" onSubmit={guardarConjunto}>
+                    <label htmlFor="ocasion">Guardar lo que llevas</label>
+                    <div>
+                        <input id="ocasion" value={ocasion} onChange={(e) => setOcasion(e.target.value)} placeholder="Cena de Laura" required />
+                        <button className="boton">Guardar</button>
+                    </div>
+                </form>
+            )}
+
+            {conjuntos.length > 0 && (
+                <section className="armario" aria-label="Tus conjuntos">
+                    <h2>Tus conjuntos</h2>
+                    <ul className="conjuntos">
+                        {conjuntos.map((conjunto) => (
+                            <li key={conjunto.id}>
+                                <button className="conjunto" aria-pressed={iguales(conjunto.puestas, puestas)} onClick={() => ponerConjunto(conjunto)}>
+                                    {conjunto.nombre}
+                                </button>
+                                <button className="tirar" aria-label={`Borrar el conjunto ${conjunto.nombre}`} onClick={() => tirarConjunto(conjunto)}>×</button>
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            )}
 
             {armario.length > 0 && (
                 <section className="armario" aria-label="Tu armario">

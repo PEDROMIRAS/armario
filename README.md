@@ -7,7 +7,8 @@ sin tener que probártela.
 
 - **Fotos**: eliges o haces una foto de una prenda (parte de arriba, parte de abajo o vestido), le quita el
   fondo y la coloca sobre una silueta. Cada prenda queda guardada en el propio móvil, en «Tu
-  armario», para volver a ponértela o borrarla. Safari puede borrar lo guardado si pasas semanas sin
+  armario», para volver a ponértela o borrarla, y lo que llevas se puede guardar como conjunto
+  con el nombre de la ocasión («Cena de Laura») para volver a él con un toque. Safari puede borrar lo guardado si pasas semanas sin
   abrir la web, salvo que la añadas a la pantalla de inicio.
 - **Maniquí 3D** (`#cuerpo`): eliges cuerpo de mujer o de hombre, cada uno con pelo, lo ajustas en
   altura y complexión, y lo giras arrastrando.

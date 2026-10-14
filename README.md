@@ -46,7 +46,7 @@ La pantalla está en [src/Cuerpo.jsx](src/Cuerpo.jsx).
 La idea completa, con lo que se va a comprobar y lo que queda fuera, está en
 [docs/ideas/armario-virtual.md](docs/ideas/armario-virtual.md).
 
-1. El armario que se llena solo: añadir prendas por foto o por enlace de tienda al usarlas,
+1. El armario que se llena solo: añadir prendas por foto o por captura de la tienda al usarlas,
    guardarlas en el dispositivo y guardar los conjuntos que te pones.
 2. ¿Me lo compro?: ver una prenda de una tienda combinada con las que ya tienes.
 3. Más adelante, prendas 3D sobre el maniquí 3D.

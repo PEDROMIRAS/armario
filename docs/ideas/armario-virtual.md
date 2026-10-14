@@ -20,18 +20,17 @@ ese esfuerzo es lo que hace que se abandonen.
 **Primero, «el armario que se llena solo»; después, «¿me lo compro?».**
 
 Las prendas no se catalogan por adelantado: se meten solo cuando vas a usarlas, por foto o pegando
-el enlace de la tienda (o compartiéndolo desde la app de la tienda). Cada conjunto que eliges se
+una captura de la tienda (o, en Android, compartiendo la imagen desde la app de la tienda). Cada conjunto que eliges se
 guarda como lo que te pusiste en tal ocasión. Así el armario se va llenando con el uso, y la
 siguiente vez partes de conjuntos reales y no de prendas sueltas.
 
-La segunda fase usa ese armario. Pegas el enlace de algo que estás pensando comprar y lo ves
+La segunda fase usa ese armario. Haces una captura de algo que estás pensando comprar y lo ves
 combinado con lo que ya tienes. Va después porque sin armario guardado no hay con qué combinar; y
 abre una forma de cubrir costes: Shein tiene programa de afiliados. Inditex, hasta donde sabemos,
 no lo tiene.
 
-Todo sigue guardado en el dispositivo, sin cuentas. El único servidor nuevo es un intermediario
-mínimo para leer la imagen de un enlace (el navegador no puede leer otra web por su cuenta), en un
-plan gratuito como Cloudflare Workers. El maniquí 2D actual basta para comprobar si la idea sirve;
+Todo sigue guardado en el dispositivo, sin cuentas y sin servidor: leer el enlace de la tienda se
+descartó porque las tiendas lo bloquean. El maniquí 2D actual basta para comprobar si la idea sirve;
 el cuerpo 3D (`#cuerpo`) pasa a ser una mejora, no la base.
 
 Dedicación prevista: 5–10 horas a la semana. Objetivo: probarla con amigas y que el proyecto pague
@@ -39,9 +38,12 @@ sus costes.
 
 ## Supuestos por comprobar
 
-- [ ] **Los enlaces de Zara y Shein se pueden leer, al menos la imagen de la prenda.** Prueba de una
-  tarde: un Worker que devuelva la imagen `og:image` de un enlace, probado con Zara, Bershka, Shein,
-  Temu, Mango y H&M. Si falla en Zara y en Shein, el enlace se sustituye por «pega una captura».
+- [x] **Los enlaces de Zara y Shein se pueden leer, al menos la imagen de la prenda.** No:
+  comprobado el 14 de octubre de 2026, las seis tiendas probadas bloquean la lectura desde un
+  servidor ([prueba](../pruebas/2026-10-14-enlaces-de-tienda.md)). El enlace se sustituye por una
+  captura de pantalla de la tienda o, en Android, por compartir la imagen desde su app.
+- [ ] **Una captura de la tienda da una prenda usable en el maniquí.** Con 5 capturas reales de Zara
+  y Shein (con modelo, sin modelo y en «flat lay») pasadas por el recorte actual.
 - [ ] **El problema se repite y lo resuelven con lo que tienen.** Seis entrevistas, al menos tres con
   mujeres que no sean amigas cercanas, preguntando por la última vez (no por opiniones): qué
   hicieron, si han probado apps de armario y por qué las dejaron, y qué parte de lo que se pusieron
@@ -60,14 +62,14 @@ sus costes.
 
 Fase A, el armario que se llena solo:
 
-- Añadir una prenda por foto (ya funciona) o por enlace de tienda, con su tipo (arriba o abajo).
+- Añadir una prenda por foto (ya funciona) o por captura de la tienda, con su tipo (arriba o abajo).
 - Guardar las prendas en el dispositivo, para que no se pierdan al cerrar la página.
 - Vestir el maniquí 2D eligiendo del armario guardado.
 - Guardar el conjunto elegido con un nombre de ocasión, y poder volver a él.
 
 Fase B, ¿me lo compro? (solo si A se usa):
 
-- Pegar el enlace de una prenda que no tienes y verla con las tuyas.
+- Meter por captura una prenda que no tienes y verla con las tuyas.
 - Enlace de afiliado de Shein en esa prenda.
 
 ## Lo que no vamos a hacer, y por qué
@@ -78,8 +80,8 @@ Fase B, ¿me lo compro? (solo si A se usa):
   acceso al correo y a tener servidor, justo lo contrario de la privacidad que se ofrece.
 - **Votación de conjuntos por WhatsApp.** Era la única variante con difusión propia; para probar
   con amigas no hace falta. Si el proyecto crece, es lo primero que añadir.
-- **Leer la ficha completa de la tienda (talla, tejido, precio).** Solo la imagen: es lo menos
-  frágil y lo menos agresivo con las tiendas.
+- **Leer el enlace de la tienda.** Las tiendas lo bloquean, y saltarse sus protecciones es frágil
+  y va contra sus condiciones ([prueba](../pruebas/2026-10-14-enlaces-de-tienda.md)).
 - **Cuentas y sincronización entre dispositivos.** Añade servidor y datos personales antes de saber
   si la app gusta.
 - **Sugerencias automáticas de conjuntos.** No prueba nada de lo que hay que comprobar.
@@ -90,7 +92,7 @@ Fase B, ¿me lo compro? (solo si A se usa):
 - ¿Cómo se ve una prenda de tienda en el maniquí 2D? La foto principal de muchas tiendas lleva modelo,
   y quitar a la persona es más difícil que quitar el fondo. Hay que ver en la prueba técnica qué
   imagen devuelve cada tienda.
-- ¿Basta con leer la imagen pública del enlace, o las tiendas la bloquean también?
+- ¿Da el programa de afiliados de Shein acceso oficial a las imágenes de producto?
 - ¿Las fotos de tienda dan problemas de derechos si se guardan solo en el móvil de quien las usa?
   Probablemente no, pero hay que confirmarlo antes de la fase B.
 

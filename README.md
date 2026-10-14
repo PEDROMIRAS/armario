@@ -32,8 +32,8 @@ El código está en [src/recorte.js](src/recorte.js) (pasos 1 a 3) y [src/textur
 ## El cuerpo 3D
 
 Los cuerpos, el pelo y la ropa son de [MakeHuman](http://www.makehumancommunity.org/), de licencia
-CC0. Están en `public/modelos/mujer.glb` (3,5 MB) y `hombre.glb` (2,9 MB), y los genera
-[modelos/cuerpo.py](modelos/cuerpo.py): crea cada cuerpo base con su peinado y un conjunto de ropa,
+CC0. Están en `public/modelos/mujer.glb` (3,7 MB) y `hombre.glb` (3,1 MB), y los genera
+[modelos/cuerpo.py](modelos/cuerpo.py): crea cada cuerpo base con su piel, ojos, cejas, pestañas, peinado y un conjunto de ropa,
 le baja los brazos (MakeHuman lo crea con ellos abiertos) y guarda como formas sus cuatro extremos
 (delgado, corpulento, bajo y alto). La app mezcla esas formas según los controles, y el pelo y las
 prendas llevan las mismas para seguir al cuerpo.

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { formas, extremoY } from './formas.js';
 import { HUECOS } from './huecos.js';
 import { trozoDeTela, quitarLuz, envoltura } from './textura.js';
@@ -69,13 +70,33 @@ export default function Cuerpo({ prendas, alCargar }) {
         const canvas = lienzo.current;
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        // Pensado para fotos de producto: no cambia el tono de los colores, y la ropa sale de su color
+        renderer.toneMapping = THREE.NeutralToneMapping;
         escena.current = new THREE.Scene();
         const camara = new THREE.PerspectiveCamera(30, 1, 0.1, 20);
         camara.position.set(0, 1.02, 4.5);
-        escena.current.add(new THREE.HemisphereLight(0xffffff, 0x8a8478, 2.2));
-        const foco = new THREE.DirectionalLight(0xffffff, 1.6);
+        // La luz de una habitación por todos lados, que marca los pliegues, y un foco que da volumen
+        const generador = new THREE.PMREMGenerator(renderer);
+        const entorno = generador.fromScene(new RoomEnvironment(), 0.04).texture;
+        generador.dispose();
+        escena.current.environment = entorno;
+        const foco = new THREE.DirectionalLight(0xffffff, 1.2);
         foco.position.set(1.5, 3, 2.5);
         escena.current.add(foco);
+
+        // Sombra difusa bajo los pies: sin ella el cuerpo parece flotar
+        const degradado = Object.assign(document.createElement('canvas'), { width: 64, height: 64 });
+        const pincel = degradado.getContext('2d');
+        const mancha = pincel.createRadialGradient(32, 32, 0, 32, 32, 32);
+        mancha.addColorStop(0, 'rgba(0, 0, 0, 0.45)');
+        mancha.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        pincel.fillStyle = mancha;
+        pincel.fillRect(0, 0, 64, 64);
+        const sombra = new THREE.Mesh(
+            new THREE.PlaneGeometry(0.9, 0.9).rotateX(-Math.PI / 2),
+            new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(degradado), transparent: true, depthWrite: false })
+        );
+        escena.current.add(sombra);
 
         const controles = new OrbitControls(camara, canvas);
         controles.target.set(0, 1.02, 0);
@@ -100,6 +121,10 @@ export default function Cuerpo({ prendas, alCargar }) {
         return () => {
             observador.disconnect();
             controles.dispose();
+            entorno.dispose();
+            sombra.geometry.dispose();
+            sombra.material.map.dispose();
+            sombra.material.dispose();
             renderer.dispose();
         };
     }, []);
@@ -120,7 +145,8 @@ export default function Cuerpo({ prendas, alCargar }) {
                     // la que nunca se tapa, y "bajo_camiseta" o "bajo_camiseta_pantalon", la que queda bajo esas prendas
                     const pieza = objeto.material.name;
                     if (pieza === 'piel' || pieza.startsWith('bajo_')) {
-                        objeto.material = new THREE.MeshStandardMaterial({ color: 0xd8a585, roughness: 0.75 });
+                        // La piel trae su textura; mate, para que no brille como el plástico
+                        objeto.material.roughness = 0.75;
                         objeto.userData.bajo = pieza.split('_').slice(1);
                         if (pieza === 'piel') cuerpo = objeto;
                     } else if (PRENDAS.includes(objeto.name)) {

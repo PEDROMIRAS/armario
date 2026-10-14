@@ -19,13 +19,21 @@ from bl_ext.blender_org.mpfb.services.targetservice import TargetService
 RECURSOS = os.environ["MAKEHUMAN_ASSETS"]
 SALIDA = os.path.join(os.getcwd(), "public", "modelos")
 
-# nombre del archivo -> (valor de "gender" en MakeHuman, peinado, conjunto, vestido o None)
+# nombre del archivo -> (valor de "gender" en MakeHuman, piel, peinado, conjunto, vestido o None)
 # El conjunto tiene que venir en dos piezas sueltas, la de arriba y el pantalón.
 # El vestido es del paquete Dress 01 (CC0); se descomprime en la misma carpeta de recursos.
 CUERPOS = {
-    "mujer": (0.0, "long01", "female_casualsuit01", "toigo_halter_dress_midi"),
-    "hombre": (1.0, "short02", "male_casualsuit04", None),
+    "mujer": (0.0, "young_caucasian_female", "long01", "female_casualsuit01", "toigo_halter_dress_midi"),
+    "hombre": (1.0, "young_caucasian_male", "short02", "male_casualsuit04", None),
 }
+# Las piezas de la cara: (carpeta, nombre, tipo en MPFB, textura). Sin ellas la cara es de muñeco.
+CARA = [
+    ("eyes", "low-poly", "Eyes", "eyes/materials/brown_eye.png"),
+    ("eyebrows", "eyebrow001", "Eyebrows", "eyebrows/eyebrow001/eyebrow001.png"),
+    ("eyelashes", "eyelashes01", "Eyelashes", "eyelashes/eyelashes01/eyelashes01.png"),
+]
+# La textura de piel viene a 2048 px; a la mitad pesa un cuarto y en un móvil no se nota
+LADO_PIEL = 1024
 # MakeHuman crea el cuerpo con los brazos abiertos; se bajan este ángulo para una postura de pie natural
 BRAZOS = math.radians(30)
 # La tela ceñida coincide con la piel; separada estos metros, la piel no asoma por el borde de la prenda
@@ -41,14 +49,15 @@ FORMAS = {
 
 
 def crear(genero, peinado, conjunto, vestido, cambios):
-    """Cuerpo con el pelo y la ropa ya ajustados a él. Devuelve [cuerpo, pelo, ropa] y, si lo hay, el vestido, con las formas y la postura aplicadas."""
+    """Cuerpo con el pelo, la cara y la ropa ya ajustados a él. Devuelve [cuerpo, pelo, *cara, ropa] y, si lo hay, el vestido, con las formas y la postura aplicadas."""
     macro = TargetService.get_default_macro_info_dict()
     macro.update({"gender": genero, **cambios})
     cuerpo = HumanService.create_human(macro_detail_dict=macro)
     # El esqueleto solo sirve para poner la postura: no se exporta
     esqueleto = HumanService.add_builtin_rig(cuerpo, "default")
     mallas = [cuerpo]
-    recursos = [("hair", peinado, "Hair"), ("clothes", conjunto, "Clothes")] + ([("clothes", vestido, "Clothes")] if vestido else [])
+    recursos = [("hair", peinado, "Hair"), *(pieza[:3] for pieza in CARA), ("clothes", conjunto, "Clothes")]
+    recursos += [("clothes", vestido, "Clothes")] if vestido else []
     for carpeta, nombre, tipo in recursos:
         antes = set(bpy.data.objects)
         HumanService.add_mhclo_asset(
@@ -88,7 +97,7 @@ def crear(genero, peinado, conjunto, vestido, cambios):
         malla.parent = None
         malla.matrix_world = lugar
     bpy.data.objects.remove(esqueleto)
-    for prenda in mallas[2:]:
+    for prenda in mallas[2 + len(CARA):]:
         for vertice in prenda.data.vertices:
             vertice.co += vertice.normal * HOLGURA
     bpy.context.view_layer.update()
@@ -105,26 +114,34 @@ def copiar_forma(base, variante, nombre):
         forma.data[v.index].co = a_base @ v.co
 
 
-def material_de_pelo(pelo):
-    """Material simple (color y transparencia de la textura), que es lo que entiende el formato web."""
-    imagen = next(n.image for m in pelo.data.materials for n in m.node_tree.nodes if n.type == "TEX_IMAGE" and n.image)
-    material = bpy.data.materials.new("pelo")
+def material_simple(nombre, imagen, transparente=True):
+    """Material con el color y la transparencia de una textura, que es lo que entiende el formato web."""
+    material = bpy.data.materials.new(nombre)
     material.use_nodes = True
     nodos = material.node_tree
     textura = nodos.nodes.new("ShaderNodeTexImage")
     textura.image = imagen
     principal = nodos.nodes["Principled BSDF"]
     nodos.links.new(textura.outputs["Color"], principal.inputs["Base Color"])
-    nodos.links.new(textura.outputs["Alpha"], principal.inputs["Alpha"])
-    pelo.data.materials.clear()
-    pelo.data.materials.append(material)
+    if transparente:
+        nodos.links.new(textura.outputs["Alpha"], principal.inputs["Alpha"])
+    return material
 
 
-for archivo, (genero, peinado, conjunto, nombre_vestido) in CUERPOS.items():
+def poner_material(malla, material):
+    malla.data.materials.clear()
+    malla.data.materials.append(material)
+
+
+for archivo, (genero, piel, peinado, conjunto, nombre_vestido) in CUERPOS.items():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     mallas = crear(genero, peinado, conjunto, nombre_vestido, {})
-    cuerpo, pelo, ropa, *vestido = mallas
+    cuerpo, pelo, *cara = mallas[:2 + len(CARA)]
+    ropa, *vestido = mallas[2 + len(CARA):]
     cuerpo.name, pelo.name = "cuerpo", "pelo"
+    for malla, (_, nombre, _, textura) in zip(cara, CARA):
+        malla.name = nombre
+        poner_material(malla, material_simple(nombre, bpy.data.images.load(os.path.join(RECURSOS, textura))))
     for malla in vestido:
         malla.name = "vestido"
         assert malla.name == "vestido"  # la app la reconoce por este nombre
@@ -162,7 +179,7 @@ for archivo, (genero, peinado, conjunto, nombre_vestido) in CUERPOS.items():
     pantalon.name, camiseta.name = "pantalon", "camiseta"
     assert (pantalon.name, camiseta.name) == ("pantalon", "camiseta")  # la app las reconoce por este nombre
     prendas = (camiseta, pantalon, *vestido)
-    mallas = [cuerpo, pelo, *prendas]
+    mallas = [cuerpo, pelo, *cara, *prendas]
 
     # Cada prenda trae la lista de vértices del cuerpo que tapa. Esas caras van con un material que
     # dice qué prendas tienen encima (una, o varias en la cintura), para que salgan como piezas
@@ -175,12 +192,19 @@ for archivo, (genero, peinado, conjunto, nombre_vestido) in CUERPOS.items():
         for p in prendas
     ]
     cuerpo.data.materials.clear()
+    (textura_piel,) = [
+        os.path.join(RECURSOS, "skins", piel, linea.split()[1])
+        for linea in open(os.path.join(RECURSOS, "skins", piel, piel + ".mhmat"), encoding="utf-8")
+        if linea.startswith("diffuseTexture ")
+    ]
+    imagen_piel = bpy.data.images.load(textura_piel)
+    imagen_piel.scale(LADO_PIEL, LADO_PIEL)
     # El índice de cada material suma 1 por la camiseta, 2 por el pantalón y 4 por el vestido:
     # "piel", "bajo_camiseta", "bajo_pantalon", "bajo_camiseta_pantalon", "bajo_vestido"…
     for indice in range(2 ** len(prendas)):
         encima = [p.name for i, p in enumerate(prendas) if indice >> i & 1]
         nombre = "_".join(["bajo", *encima]) if encima else "piel"
-        material = bpy.data.materials.new(nombre)
+        material = material_simple(nombre, imagen_piel, transparente=False)
         assert material.name == nombre  # la app las reconoce por este nombre
         cuerpo.data.materials.append(material)
     giro = cuerpo.matrix_world.to_3x3()
@@ -194,7 +218,8 @@ for archivo, (genero, peinado, conjunto, nombre_vestido) in CUERPOS.items():
             # shortcut: 8 cm de alcance, medido para estos conjuntos; una prenda más holgada no taparía nada
             encima = [all(tela.ray_cast(p - hacia_fuera * 0.02, hacia_fuera, 0.1)[0] is not None for p in puntos) for tela in telas]
             poligono.material_index = sum(tapa << i for i, tapa in enumerate(encima))
-    material_de_pelo(pelo)
+    imagen_pelo = next(n.image for m in pelo.data.materials for n in m.node_tree.nodes if n.type == "TEX_IMAGE" and n.image)
+    poner_material(pelo, material_simple("pelo", imagen_pelo))
     for objeto in mallas:
         for modificador in list(objeto.modifiers):
             objeto.modifiers.remove(modificador)

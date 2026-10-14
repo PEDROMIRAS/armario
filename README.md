@@ -5,7 +5,7 @@ sin tener que probártela.
 
 **Estado: pruebas iniciales.** Hay dos pantallas sueltas, todavía sin unir:
 
-- **Fotos**: eliges o haces una foto de una prenda (parte de arriba o parte de abajo), le quita el
+- **Fotos**: eliges o haces una foto de una prenda (parte de arriba, parte de abajo o vestido), le quita el
   fondo y la coloca sobre una silueta. No guarda las prendas: se pierden al cerrar la página.
 - **Maniquí 3D** (`#cuerpo`): eliges cuerpo de mujer o de hombre, cada uno con pelo, lo ajustas en
   altura y complexión, y lo giras arrastrando.

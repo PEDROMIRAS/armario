@@ -1,27 +1,23 @@
 import { useState } from 'react';
 import { quitarFondo } from './recorte.js';
+import { HUECOS, vestir } from './huecos.js';
 import './App.css';
-
-// Cada prenda se escala para que su cuerpo (medido en `referencia`, una franja de la foto) ocupe
-// `ancho` del maniquí, y se cuelga desde `alto`. Porcentajes sobre la silueta de 100 x 200.
-const HUECOS = [
-    { id: 'arriba', nombre: 'Parte de arriba', referencia: [0.75, 0.95], ancho: 40, alto: 14 }, // el bajo, desde los hombros
-    { id: 'abajo', nombre: 'Parte de abajo', referencia: [0.02, 0.12], ancho: 37, alto: 44 }, // la cintura
-];
 
 export default function App() {
     const [prendas, setPrendas] = useState({});
     const [estado, setEstado] = useState('');
     const [ocupado, setOcupado] = useState(false);
 
-    const poner = async ({ id: hueco, referencia }, foto) => {
+    const poner = async (hueco, foto) => {
         if (!foto) return;
         setOcupado(true);
         try {
-            const prenda = await quitarFondo(foto, setEstado, referencia);
+            const prenda = await quitarFondo(foto, setEstado, hueco.referencia);
             setPrendas((antes) => {
-                if (antes[hueco]) URL.revokeObjectURL(antes[hueco].url);
-                return { ...antes, [hueco]: prenda };
+                const nuevas = vestir(antes, hueco, prenda);
+                // Las que se quitan sueltan su imagen
+                for (const id in antes) if (nuevas[id] !== antes[id]) URL.revokeObjectURL(antes[id].url);
+                return nuevas;
             });
             setEstado('');
         } catch (error) {
